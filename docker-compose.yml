@@ -39,13 +39,15 @@ services:
       retries: 5
 
   # Application Django
+  # gunicorn --bind 0.0.0.0:8080 --workers 3 --timeout 120 gestion_reunions.wsgi:application
   web:
     build: .
     container_name: artci_e_reunion
     command: sh -c "
       python manage.py collectstatic --noinput &&
       python manage.py migrate &&
-      gunicorn --bind 0.0.0.0:8080 --workers 3 --timeout 120 gestion_reunions.wsgi:application"
+      gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--error-logfile", "-", "gestion_reunions.wsgi:application"
+
     environment:
       DEBUG: ${DEBUG:-False}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-this}
