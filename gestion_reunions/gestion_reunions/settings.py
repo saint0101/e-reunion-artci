@@ -27,6 +27,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 # ✅ CORRECTION PRINCIPALE: ALLOWED_HOSTS avec toutes les IPs qui vous accèdent
+"""
 ALLOWED_HOSTS = [
     "127.0.0.1", 
     "localhost", 
@@ -37,6 +38,9 @@ ALLOWED_HOSTS = [
     "0.0.0.0",          # Pour Docker
     "*"                 # Temporaire pour debug (RETIREZ EN PRODUCTION)
 ]
+"""
+
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', '*']
 
 # ✅ CORRECTION: URL du site dynamique
 def get_site_url(request=None):
@@ -54,8 +58,6 @@ def get_site_url(request=None):
 
 SITE_URL = get_site_url()
 
-# ✅ CORRECTION: Forcer HTTPS seulement si vraiment en HTTPS
-SECURE_SSL_REDIRECT = False  # config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 
 # Email par défaut
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@artci.ci')
@@ -201,7 +203,7 @@ if not DEBUG and os.environ.get('PRODUCTION', 'False').lower() == 'true':
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_REDIRECT_EXEMPT = []
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 else:
