@@ -122,21 +122,14 @@ main() {
     # Logs vers stdout/stderr pour Docker
     local access_log="/dev/stdout"
     local error_log="/dev/stderr"
-
+    
     exec gunicorn gestion_reunions.wsgi:application \
         --bind 0.0.0.0:8080 \
         --workers 3 \
-        --worker-class gthread \
-        --worker-connections 1000 \
-        --max-requests 1000 \
-        --max-requests-jitter 100 \
-        --timeout 120 \
-        --keep-alive 5 \
         --log-level info \
-        --access-logfile "$access_log" \
-        --error-logfile "$error_log" \
-        --capture-output \
-        --enable-stdio-inheritance
+        --access-logfile "-" \
+        --error-logfile "-" \
+        --capture-output
 }
 
 # Gestion des signaux
