@@ -70,7 +70,7 @@ services:
       # Site configuration
       SITE_NAME: "Plateforme e-REUNION ARTCI"
       TITLE_PREFIX: "eREUNION"
-      SITE_PORT: ""
+      SITE_PORT: "8080"
       SITE_PROTOCOL: "http://"
       SITE_ADDRESS: "196.216.227.105"
       DEFAULT_LIST_SIZE: "10"
@@ -88,7 +88,7 @@ services:
       - ./logs:/app/logs
       - staticfiles_volume:/app/staticfiles
     ports:
-      - "8080:80"  # Changé pour éviter le conflit avec Apache
+      - "8080:8080"  # Changé pour éviter le conflit avec Apache
     depends_on:
       db:
         condition: service_healthy
