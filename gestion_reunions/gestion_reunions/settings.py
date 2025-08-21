@@ -42,7 +42,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 # ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.100.13', '192.168.137.108', '172.20.10.2', '172.20.10.2', '192.168.137.114', '192.168.0.127']
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['127.0.0.1','localhost','172.16.0.153','196.216.227.105','0.0.0.0']
 
 # URL du site (utile pour les emails)
 SITE_URL = config('SITE_URL', default='')
@@ -225,7 +225,7 @@ if not DEBUG:
 if DEBUG:
     import logging
     logging.getLogger('django.request').setLevel(logging.ERROR)
-    
+
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
