@@ -45,7 +45,7 @@ services:
     command: sh -c "
       python manage.py collectstatic --noinput &&
       python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:80"
+      gunicorn --bind 0.0.0.0:8080 --workers 3 --timeout 120 gestion_reunions.wsgi:application"
     environment:
       DEBUG: ${DEBUG:-False}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-this}
@@ -66,20 +66,27 @@ services:
       DEFAULT_FROM_EMAIL: warrensaint1@gmail.com
       
       # Site configuration
-      SITE_NAME: "Plateforme e-REUNION AARTCI"
+      SITE_NAME: "Plateforme e-REUNION ARTCI"
       TITLE_PREFIX: "eREUNION"
-      SITE_PORT: ":80"
+      SITE_PORT: ""
       SITE_PROTOCOL: "http://"
       SITE_ADDRESS: "196.216.227.105"
       DEFAULT_LIST_SIZE: "10"
-      ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105,artci.ci"
+      
+      # Variables supplémentaires pour corriger les warnings
+      CREATE_SUPERUSER: "true"
+      DJANGO_SUPERUSER_USERNAME: "admin"
+      DJANGO_SUPERUSER_EMAIL: "admin@artci.ci"
+      DJANGO_SUPERUSER_PASSWORD: "admin123"
       
     volumes:
       - ./media:/app/media
       - ./static:/app/static
       - ./logs:/app/logs
+      - staticfiles_volume:/app/staticfiles
     ports:
-      - "80:80"
+      - "8080:8080"  # Changé pour éviter le conflit avec Apache
     depends_on:
       db:
         condition: service_healthy

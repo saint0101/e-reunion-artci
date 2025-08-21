@@ -1,7 +1,6 @@
 # Dockerfile pour l'application ARTCI e-Réunion
 FROM python:3.12-slim
 
-
 # Métadonnées
 LABEL maintainer="ARTCI <artci@artci.ci>"
 LABEL description="Application de gestion des réunions ARTCI"
@@ -13,57 +12,59 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 ENV DJANGO_SETTINGS_MODULE=gestion_reunions.settings
 
-# Créer un utilisateur non-root
-RUN adduser --disabled-password --gecos '' appuser
-
-# Installer les dépendances système
+# Installer les dépendances système en tant que root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         postgresql-client \
         build-essential \
         libpq-dev \
         gettext \
+        curl \
+        nano \
     && rm -rf /var/lib/apt/lists/*
+
+# Créer un utilisateur non-root avec UID/GID spécifiques
+RUN groupadd -r appuser -g 1000 && useradd -u 1000 -r -g appuser appuser
 
 # Définir le répertoire de travail
 WORKDIR /app
 
-# Copier les fichiers de requirements
+# Copier les fichiers de requirements et installer les dépendances
 COPY requirements.txt /app/
 COPY requirements-prod.txt /app/
-
-# Installer les dépendances Python
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements-prod.txt
 
 # Copier le code de l'application
 COPY . /app/
 
-# Créer les répertoires nécessaires
-RUN mkdir -p /app/staticfiles  && chmod -R 777 /app/staticfiles
-RUN mkdir -p /app/media && chmod -R 777 /app/media
-RUN mkdir -p /app/logs && chmod -R 777 /app/logs
-RUN mkdir -p /app/logs && chown appuser:appuser /app/logs
-# Changer la propriété des fichiers
-RUN chown -R appuser:appuser /app
+# Créer les répertoires nécessaires avec les bonnes permissions
+RUN mkdir -p /app/staticfiles \
+    && mkdir -p /app/media \
+    && mkdir -p /app/logs \
+    && mkdir -p /app/gestion_reunions/static \
+    && chown -R appuser:appuser /app \
+    && chmod -R 755 /app \
+    && chmod -R 777 /app/staticfiles \
+    && chmod -R 777 /app/media \
+    && chmod -R 777 /app/logs
+
+# Copier et configurer le script d'entrée
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Passer à l'utilisateur non-root
 USER appuser
 
-# Collecter les fichiers statiques
-WORKDIR /app/gestion_reunions
-RUN python manage.py collectstatic --noinput
-#WORKDIR /app
-# RUN python manage.py collectstatic --noinput
-
 # Exposer le port
-EXPOSE 80
+EXPOSE 8080
 
-# Script d'entrée
-WORKDIR /app/gestion_reunions
-COPY docker-entrypoint.sh /app/gestion_reunions/
-USER root
-RUN chmod +x /app/gestion_reunions/docker-entrypoint.sh
-USER appuser
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
 
-ENTRYPOINT ["/app/gestion_reunions/docker-entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "3", "gestion_reunions.wsgi:application"]
+# Point d'entrée
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Commande par défaut (sera overridée par docker-compose)
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--timeout", "120", "gestion_reunions.wsgi:application"]

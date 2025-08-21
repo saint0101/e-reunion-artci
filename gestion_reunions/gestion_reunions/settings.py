@@ -104,17 +104,19 @@ WSGI_APPLICATION = "gestion_reunions.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Database
+
+# DATABASE CONFIGURATION
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='e_reunions_artci'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='password'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME': os.environ.get('DB_NAME', 'gestion_reunions'),
+        'USER': os.environ.get('DB_USER', 'e_reunion_artci'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres_ereunion@20.25'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -161,6 +163,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Configuration Email
+"""
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -171,15 +174,31 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='')
 
+"""
+
+# EMAIL CONFIGURATION
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 
 
 # CUSTOM SETTINGS
-SITE_NAME = 'Plateforme e-REUNIONS ARTCI'  # nom du site
-TITLE_PREFIX = 'eReunion'  # prefix à ajouter dans les balises title des pages HTML
+# SITE_NAME = 'Plateforme e-REUNIONS ARTCI'  # nom du site
+# TITLE_PREFIX = 'eReunion'  # prefix à ajouter dans les balises title des pages HTML
 SITE_PORT = ':80' 
 SITE_PROTOCOL = 'http://' # ou 'https://'
 DEFAULT_LIST_SIZE = 10 # nombre d'éléments par page à afficher par défaut dans les vues en liste
+
+
+# Variables de site
+SITE_NAME = os.environ.get('SITE_NAME', 'Plateforme e-REUNION ARTCI')
+TITLE_PREFIX = os.environ.get('TITLE_PREFIX', 'eREUNION')
+
 
 # Login/Logout URLs
 LOGIN_URL = '/accounts/login/'
@@ -201,15 +220,42 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
+
+# Désactiver les logs d'erreur de permissions pour les fichiers statiques en développement
+if DEBUG:
+    import logging
+    logging.getLogger('django.request').setLevel(logging.ERROR)
+    
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 
-LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(parents=True, exist_ok=True)  # Crée le dossier logs s'il n'existe pas
+# LOG_DIR = BASE_DIR / 'logs'
+# LOG_DIR.mkdir(parents=True, exist_ok=True)  # Crée le dossier logs s'il n'existe pas
 
-# Logging Configuration
+LOG_DIR = BASE_DIR / 'logs'
+if not LOG_DIR.exists():
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# SITE CONFIGURATION DYNAMIQUE
+def get_site_url(request=None):
+    """Obtient l'URL du site de manière dynamique"""
+    if request:
+        protocol = 'https' if request.is_secure() else 'http'
+        host = request.get_host()
+        return f"{protocol}://{host}"
+    else:
+        # Fallback pour les contextes sans request
+        protocol = os.environ.get('SITE_PROTOCOL', 'http://')
+        address = os.environ.get('SITE_ADDRESS', 'localhost')
+        port = os.environ.get('SITE_PORT', '')
+        
+SITE_URL = get_site_url()
+
+
+# LOGGING CONFIGURATION
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -231,7 +277,7 @@ LOGGING = {
             'formatter': 'verbose',
         },
         'console': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
@@ -246,22 +292,20 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
-        'reunions': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
     },
 }
 
 # Cache Configuration (sans Redis - utilise la mémoire locale)
+# REDIS CONFIGURATION
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
     }
 }
-
 
 # Session Configuration
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
