@@ -46,7 +46,7 @@ services:
     command: sh -c "
       python manage.py collectstatic --noinput &&
       python manage.py migrate &&
-      gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--error-logfile", "-", "gestion_reunions.wsgi:application"
+      gunicorn --bind 0.0.0.0:8080 --workers 3 --error-logfile - gestion_reunions.wsgi:application"
 
     environment:
       DEBUG: ${DEBUG:-False}
@@ -88,7 +88,7 @@ services:
       - ./logs:/app/logs
       - staticfiles_volume:/app/staticfiles
     ports:
-      - "8080:8080"  # Changé pour éviter le conflit avec Apache
+      - "8080:80"  # Changé pour éviter le conflit avec Apache
     depends_on:
       db:
         condition: service_healthy

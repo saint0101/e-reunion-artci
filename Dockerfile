@@ -47,7 +47,9 @@ RUN mkdir -p /app/staticfiles \
     && chmod -R 755 /app \
     && chmod -R 777 /app/staticfiles \
     && chmod -R 777 /app/media \
-    && chmod -R 777 /app/logs
+    && chmod -R 777 /app/logs \
+    && chown -R appuser:appuser /app/logs \
+    && chmod -R 755 /app/logs
 
 # Copier et configurer le script d'entrée
 COPY docker-entrypoint.sh /usr/local/bin/
@@ -68,4 +70,4 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Commande par défaut (sera overridée par docker-compose)
 # CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--timeout", "120", "gestion_reunions.wsgi:application"]
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "3", "--error-logfile", "-", "gestion_reunions.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--error-logfile", "-", "gestion_reunions.wsgi:application"]
