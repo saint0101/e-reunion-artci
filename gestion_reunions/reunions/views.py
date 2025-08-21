@@ -374,7 +374,7 @@ def build_validation_url_artci(token):
         base_url = site_url
     else:
         allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
-        host = allowed_hosts[0] if allowed_hosts and allowed_hosts[0] != '*' else '192.168.100.13:8000'
+        host = allowed_hosts[0] if allowed_hosts and allowed_hosts[0] != '*' else '196.216.227.105:80'
         base_url = f"{protocol}://{host}"
 
     return f"{base_url}/validation/{token}/"

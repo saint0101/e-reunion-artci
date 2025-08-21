@@ -50,7 +50,10 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Collecter les fichiers statiques
+WORKDIR /app/gestion_reunions
 RUN python manage.py collectstatic --noinput
+WORKDIR /app
+# RUN python manage.py collectstatic --noinput
 
 # Exposer le port
 EXPOSE 80
