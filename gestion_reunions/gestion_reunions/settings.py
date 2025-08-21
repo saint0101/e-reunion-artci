@@ -14,25 +14,11 @@ import os
 from pathlib import Path
 from decouple import config
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # IMPORTANT: AUTH_USER_MODEL doit être défini AVANT tout
 AUTH_USER_MODEL = 'reunions.CustomUser'
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = "django-insecure-7w%g_97t0bdg-py(38plonykdt)fbf3if05tb$_$*7*h3%ya4e"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-
-#ALLOWED_HOSTS = []
-
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
@@ -40,21 +26,41 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
-# ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.100.13', '192.168.137.108', '172.20.10.2', '172.20.10.2', '192.168.137.114', '192.168.0.127']
+# ✅ CORRECTION PRINCIPALE: ALLOWED_HOSTS avec toutes les IPs qui vous accèdent
+ALLOWED_HOSTS = [
+    "127.0.0.1", 
+    "localhost", 
+    "196.216.227.105",  # IP publique serveur
+    "172.16.0.153",     # IP locale serveur
+    "196.216.227.181",  # IP qui accède depuis les logs
+    "192.168.102.131",  # IP qui accède depuis les logs
+    "0.0.0.0",          # Pour Docker
+    "*"                 # Temporaire pour debug (RETIREZ EN PRODUCTION)
+]
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "196.216.227.105", "172.16.0.153"]
+# ✅ CORRECTION: URL du site dynamique
+def get_site_url(request=None):
+    """Obtient l'URL du site de manière dynamique"""
+    if request:
+        protocol = 'https' if request.is_secure() else 'http'
+        host = request.get_host()
+        return f"{protocol}://{host}"
+    else:
+        # Fallback pour les contextes sans request
+        protocol = os.environ.get('SITE_PROTOCOL', 'http://')
+        address = os.environ.get('SITE_ADDRESS', '196.216.227.105')
+        port = os.environ.get('SITE_PORT', ':8080')
+        return f"{protocol}{address}{port}"
 
-# URL du site (utile pour les emails)
-SITE_URL = config('SITE_URL', default='')
+SITE_URL = get_site_url()
 
-# Forcer HTTPS en prod
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+# ✅ CORRECTION: Forcer HTTPS seulement si vraiment en HTTPS
+SECURE_SSL_REDIRECT = False  # config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 
 # Email par défaut
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@localhost')
-# Application definition
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@artci.ci')
 
+# Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -63,7 +69,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-     # Third party apps
+    # Third party apps
     'crispy_forms',
     'crispy_bootstrap5',
     
@@ -72,8 +78,10 @@ INSTALLED_APPS = [
     'accounts',
 ]
 
+# ✅ AJOUT: WhiteNoise pour servir les fichiers statiques
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Ajouté pour les fichiers statiques
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -91,6 +99,7 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
@@ -100,11 +109,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "gestion_reunions.wsgi.application"
-
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 
 # DATABASE CONFIGURATION
 DATABASES = {
@@ -118,10 +122,7 @@ DATABASES = {
     }
 }
 
-
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -137,18 +138,25 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Abidjan'
 USE_I18N = True
 USE_TZ = True
 
-
-# Configuration des fichiers statiques et médias
+# ✅ CORRECTION: Configuration des fichiers statiques
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# ✅ VÉRIFICATION: Créer le dossier static s'il n'existe pas
+static_dir = BASE_DIR / 'static'
+if not static_dir.exists():
+    static_dir.mkdir(parents=True, exist_ok=True)
+
+STATICFILES_DIRS = [static_dir]
+
+# Configuration pour servir les fichiers statiques avec WhiteNoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -158,24 +166,8 @@ os.makedirs(MEDIA_ROOT, exist_ok=True)
 os.makedirs(MEDIA_ROOT / 'qr_codes', exist_ok=True)
 os.makedirs(MEDIA_ROOT / 'comptes_rendus', exist_ok=True)
 
-
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-# Configuration Email
-"""
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False  # ⚠️ Ne pas activer SSL quand TLS est utilisé
-EMAIL_TIMEOUT = 60
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='')
-
-"""
 
 # EMAIL CONFIGURATION
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -186,20 +178,12 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
-
-
 # CUSTOM SETTINGS
-# SITE_NAME = 'Plateforme e-REUNIONS ARTCI'  # nom du site
-# TITLE_PREFIX = 'eReunion'  # prefix à ajouter dans les balises title des pages HTML
-SITE_PORT = ':80' 
-SITE_PROTOCOL = 'http://' # ou 'https://'
-DEFAULT_LIST_SIZE = 10 # nombre d'éléments par page à afficher par défaut dans les vues en liste
-
-
-# Variables de site
 SITE_NAME = os.environ.get('SITE_NAME', 'Plateforme e-REUNION ARTCI')
 TITLE_PREFIX = os.environ.get('TITLE_PREFIX', 'eREUNION')
-
+SITE_PORT = os.environ.get('SITE_PORT', ':8080')
+SITE_PROTOCOL = os.environ.get('SITE_PROTOCOL', 'http://')
+DEFAULT_LIST_SIZE = int(os.environ.get('DEFAULT_LIST_SIZE', 10))
 
 # Login/Logout URLs
 LOGIN_URL = '/accounts/login/'
@@ -210,8 +194,8 @@ LOGOUT_REDIRECT_URL = '/'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Security Settings (for production)
-if not DEBUG:
+# ✅ CORRECTION: Security Settings seulement si vraiment en production
+if not DEBUG and os.environ.get('PRODUCTION', 'False').lower() == 'true':
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -220,43 +204,21 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-
-
-# Désactiver les logs d'erreur de permissions pour les fichiers statiques en développement
-if DEBUG:
-    import logging
-    logging.getLogger('django.request').setLevel(logging.ERROR)
+else:
+    # En développement/test, pas de redirection HTTPS
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
-
-# LOG_DIR = BASE_DIR / 'logs'
-# LOG_DIR.mkdir(parents=True, exist_ok=True)  # Crée le dossier logs s'il n'existe pas
-
+# ✅ LOGGING CONFIGURATION AMÉLIORÉE
 LOG_DIR = BASE_DIR / 'logs'
 if not LOG_DIR.exists():
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-
-# SITE CONFIGURATION DYNAMIQUE
-def get_site_url(request=None):
-    """Obtient l'URL du site de manière dynamique"""
-    if request:
-        protocol = 'https' if request.is_secure() else 'http'
-        host = request.get_host()
-        return f"{protocol}://{host}"
-    else:
-        # Fallback pour les contextes sans request
-        protocol = os.environ.get('SITE_PROTOCOL', 'http://')
-        address = os.environ.get('SITE_ADDRESS', 'localhost')
-        port = os.environ.get('SITE_PORT', '')
-        
-SITE_URL = get_site_url()
-
-
-# LOGGING CONFIGURATION
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -274,18 +236,18 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+            'filename': LOG_DIR / 'django.log',
             'formatter': 'verbose',
         },
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
-        'level': 'INFO',
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
     },
     'loggers': {
         'django': {
@@ -293,10 +255,14 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else 'ERROR',
+            'propagate': False,
+        },
     },
 }
 
-# Cache Configuration (sans Redis - utilise la mémoire locale)
 # REDIS CONFIGURATION
 CACHES = {
     'default': {
@@ -311,3 +277,13 @@ CACHES = {
 # Session Configuration
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
+
+# ✅ AJOUT: Variables pour débuguer les redirections
+if DEBUG:
+    print(f"🐞 DEBUG INFO:")
+    print(f"   ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+    print(f"   SITE_URL: {SITE_URL}")
+    print(f"   SECURE_SSL_REDIRECT: {SECURE_SSL_REDIRECT}")
+    print(f"   DEBUG: {DEBUG}")
+    print(f"   STATIC_ROOT: {STATIC_ROOT}")
+    print(f"   MEDIA_ROOT: {MEDIA_ROOT}")
