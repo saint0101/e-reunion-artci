@@ -42,7 +42,8 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 # ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.100.13', '192.168.137.108', '172.20.10.2', '172.20.10.2', '192.168.137.114', '192.168.0.127']
-ALLOWED_HOSTS = ['127.0.0.1','localhost','172.16.0.153','196.216.227.105','0.0.0.0']
+
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "196.216.227.105", "172.16.0.153"]
 
 # URL du site (utile pour les emails)
 SITE_URL = config('SITE_URL', default='')

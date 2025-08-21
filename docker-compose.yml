@@ -88,7 +88,7 @@ services:
       - ./logs:/app/logs
       - staticfiles_volume:/app/staticfiles
     ports:
-      - "8080:8080"  # Changé pour éviter le conflit avec Apache
+      - "80:8080"  # Changé pour éviter le conflit avec Apache
     depends_on:
       db:
         condition: service_healthy
