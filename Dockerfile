@@ -44,12 +44,7 @@ RUN mkdir -p /app/staticfiles \
     && mkdir -p /app/logs \
     && mkdir -p /app/gestion_reunions/static \
     && chown -R appuser:appuser /app \
-    && chmod -R 755 /app \
-    && chmod -R 777 /app/staticfiles \
-    && chmod -R 777 /app/media \
-    && chmod -R 777 /app/logs \
-    && chown -R appuser:appuser /app/logs \
-    && chmod -R 755 /app/logs
+    && chmod -R 755 /app
 
 # Copier et configurer le script d'entrée
 COPY docker-entrypoint.sh /usr/local/bin/
@@ -58,16 +53,14 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Passer à l'utilisateur non-root
 USER appuser
 
-# Exposer le port
+# Exposer le port 8080
 EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/ || exit 1
 
-# Point d'entrée
+# Point d'entrée - UTILISER LE SCRIPT
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Commande par défaut (sera overridée par docker-compose)
-# CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--timeout", "120", "gestion_reunions.wsgi:application"]
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--error-logfile", "-", "gestion_reunions.wsgi:application"]
+# Pas de CMD - le script d'entrée lance gunicorn

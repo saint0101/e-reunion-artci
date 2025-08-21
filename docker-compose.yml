@@ -13,7 +13,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db_backup:/backup
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # Seulement accessible localement
     networks:
       - edcp_network
     healthcheck:
@@ -27,7 +27,7 @@ services:
     image: redis:7-alpine
     container_name: artci_redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"  # Seulement accessible localement
     volumes:
       - redis_data:/data
     networks:
@@ -39,15 +39,12 @@ services:
       retries: 5
 
   # Application Django
-  # gunicorn --bind 0.0.0.0:8080 --workers 3 --timeout 120 gestion_reunions.wsgi:application
   web:
     build: .
     container_name: artci_e_reunion
-    command: sh -c "
-      python manage.py collectstatic --noinput &&
-      python manage.py migrate &&
-      gunicorn --bind 0.0.0.0:8080 --workers 3 --error-logfile - gestion_reunions.wsgi:application"
-
+    # ✅ SOLUTION: Utiliser SEULEMENT le script d'entrée (pas de command override)
+    # Le script d'entrée gère tout : migrations, collectstatic, superuser, et gunicorn
+    
     environment:
       DEBUG: ${DEBUG:-False}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-this}
@@ -67,16 +64,18 @@ services:
       EMAIL_HOST_PASSWORD: "wcum uphk tocm cter"
       DEFAULT_FROM_EMAIL: warrensaint1@gmail.com
       
-      # Site configuration
+      # Site configuration pour IP publique
       SITE_NAME: "Plateforme e-REUNION ARTCI"
       TITLE_PREFIX: "eREUNION"
-      SITE_PORT: "8080"
+      SITE_PORT: ""  # Pas de port dans l'URL publique
       SITE_PROTOCOL: "http://"
-      SITE_ADDRESS: "196.216.227.105"
+      SITE_ADDRESS: "196.216.227.105"  # IP publique
       DEFAULT_LIST_SIZE: "10"
+      
+      # IMPORTANT: Autoriser l'IP publique et locale
       ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105,artci.ci"
       
-      # Variables supplémentaires pour corriger les warnings
+      # Variables pour le superutilisateur
       CREATE_SUPERUSER: "true"
       DJANGO_SUPERUSER_USERNAME: "admin"
       DJANGO_SUPERUSER_EMAIL: "admin@artci.ci"
@@ -88,7 +87,8 @@ services:
       - ./logs:/app/logs
       - staticfiles_volume:/app/staticfiles
     ports:
-      - "80:8080"  # Changé pour éviter le conflit avec Apache
+      # ✅ CORRECTION: Exposer sur toutes les interfaces pour l'IP publique
+      - "0.0.0.0:8080:8080"  # Accessible depuis l'IP publique
     depends_on:
       db:
         condition: service_healthy

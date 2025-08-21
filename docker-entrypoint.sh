@@ -17,17 +17,13 @@ check_env_vars() {
     echo "   - Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
     echo "   - User: ${DB_USER}"
     echo "   - Working dir: $(pwd)"
+    echo "   - IP publique: 196.216.227.105:8080"
 }
 
 # Créer les répertoires nécessaires
 create_directories() {
     echo "📁 Création des répertoires nécessaires..."
     mkdir -p /app/staticfiles /app/media /app/logs /app/gestion_reunions/static
-
-    # Créer des fichiers de log vides pour éviter les erreurs de permissions
-    touch /app/logs/access.log 2>/dev/null || echo "⚠️ Impossible de créer access.log"
-    touch /app/logs/error.log 2>/dev/null || echo "⚠️ Impossible de créer error.log"
-    touch /app/logs/django.log 2>/dev/null || echo "⚠️ Impossible de créer django.log"
     echo "✅ Répertoires créés"
 }
 
@@ -75,7 +71,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(username='$username').exists():
     User.objects.create_superuser('$username', '$email', '$password')
-    print(f"✅ Superutilisateur créé: {username} / {password}")
+    print(f"✅ Superutilisateur créé: $username / $password")
 else:
     print("ℹ️ Superutilisateur existe déjà")
 EOF
@@ -111,24 +107,34 @@ main() {
     collect_static
     load_initial_data
 
+    echo ""
     echo "🎉 Application prête!"
+    echo ""
     echo "🌐 Informations de connexion:"
-    echo "   - URL: http://196.216.227.105"
-    echo "   - Admin: ${DJANGO_SUPERUSER_USERNAME:-admin}"
-    echo "   - Password: ${DJANGO_SUPERUSER_PASSWORD:-admin123}"
+    echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "   📱 URL publique: http://196.216.227.105:8080"
+    echo "   🏠 URL locale:   http://172.16.0.153:8080"
+    echo "   👤 Admin:        ${DJANGO_SUPERUSER_USERNAME:-admin}"
+    echo "   🔑 Password:     ${DJANGO_SUPERUSER_PASSWORD:-admin123}"
+    echo "   🔧 Admin panel:  http://196.216.227.105:8080/admin"
+    echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
 
-    echo "🚀 Démarrage de Gunicorn..."
-
-    # Logs vers stdout/stderr pour Docker
-    local access_log="/dev/stdout"
-    local error_log="/dev/stderr"
+    echo "🚀 Démarrage de Gunicorn sur 0.0.0.0:8080..."
     
+    # ✅ CORRECTION FINALE: Gunicorn avec logs vers stdout/stderr
     exec gunicorn gestion_reunions.wsgi:application \
         --bind 0.0.0.0:8080 \
         --workers 3 \
+        --worker-class gthread \
+        --worker-connections 1000 \
+        --max-requests 1000 \
+        --max-requests-jitter 100 \
+        --timeout 120 \
+        --keep-alive 5 \
         --log-level info \
-        --access-logfile "-" \
-        --error-logfile "-" \
+        --access-logfile=- \
+        --error-logfile=- \
         --capture-output
 }
 
