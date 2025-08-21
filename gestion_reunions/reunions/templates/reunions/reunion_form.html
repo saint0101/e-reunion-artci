@@ -1,0 +1,117 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}
+{% if reunion %}Modifier Réunion{% else %}Nouvelle Réunion{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-calendar-plus me-2 text-primary"></i>
+                    {% if reunion %}Modifier la Réunion{% else %}Créer une Nouvelle Réunion{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.titre.id_for_label }}" class="form-label">
+                                <i class="fas fa-heading me-1"></i>Titre de la Réunion *
+                            </label>
+                            {{ form.titre }}
+                            {% if form.titre.errors %}
+                                <div class="text-danger mt-1">{{ form.titre.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.date_debut.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar-day me-1"></i>Date de Début *
+                            </label>
+                            {{ form.date_debut }}
+                            {% if form.date_debut.errors %}
+                                <div class="text-danger mt-1">{{ form.date_debut.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.date_fin.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar-day me-1"></i>Date de Fin *
+                            </label>
+                            {{ form.date_fin }}
+                            {% if form.date_fin.errors %}
+                                <div class="text-danger mt-1">{{ form.date_fin.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.lieu.id_for_label }}" class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>Lieu *
+                            </label>
+                            {{ form.lieu }}
+                            {% if form.lieu.errors %}
+                                <div class="text-danger mt-1">{{ form.lieu.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.secretaire.id_for_label }}" class="form-label">
+                                <i class="fas fa-user-edit me-1"></i>Secrétaire
+                            </label>
+                            {{ form.secretaire }}
+                            {% if form.secretaire.errors %}
+                                <div class="text-danger mt-1">{{ form.secretaire.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <i class="fas fa-align-left me-1"></i>Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger mt-1">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                            <i class="fas fa-flag me-1"></i>Statut
+                        </label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="text-danger mt-1">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'reunion_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Retour
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if reunion %}Mettre à Jour{% else %}Créer{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

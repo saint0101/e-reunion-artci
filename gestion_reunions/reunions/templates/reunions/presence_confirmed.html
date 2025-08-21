@@ -1,0 +1,77 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Présence Confirmée{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body text-center p-5">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle fa-5x text-success mb-3"></i>
+                    <h2 class="h3 mb-3 text-success">Présence Confirmée !</h2>
+                    {% if direct_confirmation %}
+                        <p class="text-muted">Votre présence a été confirmée immédiatement</p>
+                    {% else %}
+                        <p class="text-muted">Votre présence était déjà confirmée</p>
+                    {% endif %}
+                </div>
+                
+                <div class="bg-light rounded-3 p-4 mb-4">
+                    <h5 class="text-primary mb-2">{{ reunion.titre }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ reunion.lieu }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        {{ presence_request.email }}
+                    </p>
+                </div>
+                
+                <div class="card border-success mb-4">
+                    <div class="card-body">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-user-check me-2"></i>
+                            Vos Informations
+                        </h6>
+                        <div class="row text-start">
+                            <div class="col-sm-6">
+                                <strong>Nom :</strong><br>
+                                <span class="text-muted">{{ presence_request.nom|default:"—" }}</span>
+                            </div>
+                            <div class="col-sm-6">
+                                <strong>Prénom :</strong><br>
+                                <span class="text-muted">{{ presence_request.prenom|default:"—" }}</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Organisation :</strong><br>
+                            <span class="text-muted">{{ presence_request.organisation|default:"—" }}</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Confirmé le :</strong><br>
+                            <span class="text-muted">{{ presence_request.confirmed_at|date:"d/m/Y à H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success border-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Important :</strong> Conservez cette confirmation. Vous recevrez le compte-rendu de la réunion si un document est partagé.
+                </div>
+                
+                <div class="mt-4">
+                    <p class="text-muted small">
+                        Vous pouvez fermer cette page. Votre présence est enregistrée dans le système.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

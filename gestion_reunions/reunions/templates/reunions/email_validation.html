@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validation de Présence</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #FF6B35, #ff8c5a); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content { 
+            padding: 30px; 
+        }
+        .reunion-info { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            border-left: 4px solid #FF6B35;
+        }
+        .reunion-info h3 {
+            color: #FF6B35;
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .btn { 
+            display: inline-block; 
+            background: #28A745; 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            text-align: center;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover { 
+            background: #218838; 
+            color: white;
+            text-decoration: none;
+        }
+        .footer { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            text-align: center; 
+            color: #6c757d; 
+            font-size: 14px; 
+        }
+        .icon {
+            margin-right: 8px;
+        }
+        .link-fallback {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🎯 Validation de Présence</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Confirmez votre participation à la réunion</p>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour,</p>
+            
+            <p>Vous avez demandé à confirmer votre présence à la réunion suivante :</p>
+            
+            <div class="reunion-info">
+                <h3>📅 {{ presence_request.reunion.titre }}</h3>
+                <p><strong>📍 Lieu :</strong> {{ presence_request.reunion.lieu }}</p>
+                <p><strong>🕐 Date :</strong> {{ presence_request.reunion.date_debut|date:"l d F Y à H:i" }}</p>
+                <p><strong>👤 Organisateur :</strong> {{ presence_request.reunion.organisateur.first_name }} {{ presence_request.reunion.organisateur.last_name }}</p>
+                <p><strong>📧 Votre email :</strong> {{ presence_request.email }}</p>
+            </div>
+            
+            <p>Pour finaliser votre inscription, veuillez cliquer sur le bouton ci-dessous :</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ validation_url }}" class="btn">
+                    ✅ Confirmer ma Présence NARTCI
+                </a>
+            </div>
+            
+            <p><small>Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :</small></p>
+            <div class="link-fallback">{{ validation_url }}</div>
+            
+            <p>Sur la page de validation, vous pourrez :</p>
+            <ul>
+                <li>✅ Confirmer votre présence</li>
+                <li>📝 Ajouter vos informations (nom, prénom, organisation)</li>
+                <li>❌ Annuler votre inscription si nécessaire</li>
+            </ul>
+            
+            <p>Cordialement,<br>L'équipe de gestion des réunions</p>
+        </div>
+        
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            <p>© 2024 Gestion des Réunions - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>

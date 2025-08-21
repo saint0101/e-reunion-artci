@@ -1,0 +1,56 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Supprimer Utilisateur{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Supprimer l'Utilisateur
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning border-0">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Attention !</strong> Cette action est irréversible.
+                </div>
+                
+                <p>Êtes-vous sûr de vouloir supprimer cet utilisateur ?</p>
+                
+                <div class="bg-light rounded p-3 mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar me-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px;">
+                                {{ form_user.first_name|first|default:form_user.username|first }}{{ form_user.last_name|first }}
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="text-primary mb-1">{{ form_user.first_name }} {{ form_user.last_name }}</h5>
+                            <p class="mb-1"><strong>Username :</strong> {{ form_user.username }}</p>
+                            <p class="mb-1"><strong>Email :</strong> {{ form_user.email }}</p>
+                            <p class="mb-1"><strong>Rôle :</strong> {{ form_user.get_role_display }}</p>
+                            <p class="mb-0"><strong>Membre depuis :</strong> {{ form_user.date_joined|date:"d/m/Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'user_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Supprimer Définitivement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

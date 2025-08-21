@@ -1,0 +1,203 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-users text-primary me-2"></i>
+        Gestion des Utilisateurs
+    </h1>
+    <a href="{% url 'user_create' %}" class="btn btn-primary">
+        <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
+    </a>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h4>{{ total_users }}</h4>
+                <small class="text-muted">Total Utilisateurs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-shield fa-2x text-danger mb-2"></i>
+                <!-- <h4>{{ users.object_list|length }}</h4> -->
+                <h4>{{ total_admins }}</h4>
+                <small class="text-muted">Administrateurs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-edit fa-2x text-warning mb-2"></i>
+                <h4>{{ total_secretaires }}</h4>
+                <small class="text-muted">Secrétaires</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user fa-2x text-info mb-2"></i>
+                <h4>{{ total_participants }}</h4>
+                <small class="text-muted">Participants</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres et recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Rechercher</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ search_query }}" placeholder="Nom, email, username...">
+            </div>
+            <div class="col-md-4">
+                <label for="role" class="form-label">Rôle</label>
+                <select class="form-control" id="role" name="role">
+                    <option value="">Tous les rôles</option>
+                    {% for role_key, role_name in roles %}
+                    <option value="{{ role_key }}" {% if role_filter == role_key %}selected{% endif %}>
+                        {{ role_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search me-1"></i>Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des utilisateurs -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if users %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Email</th>
+                        <th>Rôle</th>
+                        <th>Statut</th>
+                        <th>Membre depuis</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar me-3">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                         style="width: 40px; height: 40px;">
+                                        {{ user.first_name|first|default:user.username|first }}{{ user.last_name|first }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ user.first_name }} {{ user.last_name }}</div>
+                                    <small class="text-muted">@{{ user.username }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.role == 'admin' %}
+                                <span class="badge bg-danger">{{ user.get_role_display }}</span>
+                            {% elif user.role == 'secretary' %}
+                                <span class="badge bg-warning">{{ user.get_role_display }}</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ user.get_role_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.date_joined|date:"d/m/Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'user_detail' user.pk %}" class="btn btn-outline-primary" title="Voir">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'user_update' user.pk %}" class="btn btn-outline-secondary" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if user != request.user %}
+                                <a href="{% url 'user_delete' user.pk %}" class="btn btn-outline-danger" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if users.has_other_pages %}
+        <div class="d-flex justify-content-center mt-4 p-3">
+            <nav aria-label="Pagination">
+                <ul class="pagination">
+                    {% if users.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">Première</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ users.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">Précédente</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ users.number }} sur {{ users.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if users.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ users.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">Suivante</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ users.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}">Dernière</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users-slash fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucun utilisateur trouvé</h5>
+            <p class="text-muted">Aucun utilisateur ne correspond à vos critères de recherche.</p>
+            <a href="{% url 'user_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Créer le Premier Utilisateur
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

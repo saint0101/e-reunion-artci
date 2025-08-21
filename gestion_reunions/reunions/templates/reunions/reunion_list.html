@@ -1,0 +1,97 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Liste des Réunions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-calendar-alt text-primary me-2"></i>
+        Liste des Réunions
+    </h1>
+    {% if user.role == 'admin' or user.role == 'secretary' %}
+    <a href="{% url 'reunion_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Nouvelle Réunion
+    </a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if reunions %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Titre</th>
+                        <th>Date</th>
+                        <th>Lieu</th>
+                        <th>Organisateur</th>
+                        <th>Participants</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reunion in reunions %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ reunion.titre }}</div>
+                            <small class="text-muted">{{ reunion.description|truncatewords:10 }}</small>
+                        </td>
+                        <td>
+                            <div>{{ reunion.date_debut|date:"d/m/Y" }}</div>
+                            <small class="text-muted">{{ reunion.date_debut|date:"H:i" }} - {{ reunion.date_fin|date:"H:i" }}</small>
+                        </td>
+                        <td>{{ reunion.lieu }}</td>
+                        <td>{{ reunion.organisateur.first_name }} {{ reunion.organisateur.last_name }}</td>
+                        <td>
+                            <span class="badge bg-primary rounded-pill">
+                                {{ reunion.presence_requests.count }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if reunion.status == 'planned' %}
+                                <span class="badge bg-warning">Planifiée</span>
+                            {% elif reunion.status == 'ongoing' %}
+                                <span class="badge bg-success">En cours</span>
+                            {% elif reunion.status == 'finished' %}
+                                <span class="badge bg-info">Terminée</span>
+                            {% elif reunion.status == 'cancelled' %}
+                                <span class="badge bg-danger">Annulée</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'reunion_detail' reunion.pk %}" class="btn btn-outline-primary" title="Voir">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if user.role == 'admin' or reunion.organisateur == user %}
+                                <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-secondary" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'reunion_delete' reunion.pk %}" class="btn btn-outline-danger" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucune réunion trouvée</h5>
+            <p class="text-muted">Commencez par créer votre première réunion</p>
+            {% if user.role == 'admin' or user.role == 'secretary' %}
+            <a href="{% url 'reunion_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Créer une Réunion
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

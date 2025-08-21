@@ -1,0 +1,75 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Confirmation de Présence{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body text-center p-5">
+                <div class="mb-4">
+                    <i class="fas fa-qrcode fa-4x text-primary mb-3"></i>
+                    <h2 class="h4 mb-3">Confirmation de Présence</h2>
+                </div>
+                
+                <div class="bg-light rounded-3 p-4 mb-4">
+                    <h5 class="text-primary mb-2">{{ reunion.titre }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ reunion.lieu }}
+                    </p>
+                </div>
+                
+                <div class="alert alert-info border-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Nous respectons votre vie privée. Vos données ne seront utilisées que pour cette réunion.
+                </div>
+                
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="consent" required>
+                    <label class="form-check-label text-start" for="consent">
+                        J'accepte l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion. 
+                        Mes informations ne seront pas partagées avec des tiers.
+                    </label>
+                </div>
+                
+                <button type="button" class="btn btn-primary btn-lg px-5" onclick="showEmailForm()" disabled id="continueBtn">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    Continuer
+                </button>
+                
+                <!-- Formulaire Email (caché initialement) -->
+                <div id="emailForm" style="display: none;" class="mt-4">
+                    <form method="post" action="{% url 'presence_form' reunion.qr_code_uuid %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Votre adresse email</label>
+                            <input type="email" class="form-control form-control-lg" id="email" name="email" 
+                                   placeholder="votre.email@example.com" required>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg px-5">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Envoyer la Demande
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('consent').addEventListener('change', function() {
+    document.getElementById('continueBtn').disabled = !this.checked;
+});
+
+function showEmailForm() {
+    document.getElementById('emailForm').style.display = 'block';
+    document.getElementById('continueBtn').style.display = 'none';
+}
+</script>
+{% endblock %}

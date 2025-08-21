@@ -1,0 +1,88 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Confirmation de Présence{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-check fa-4x text-success mb-3"></i>
+                    <h2 class="h4 mb-3">Confirmation Directe</h2>
+                    <p class="text-muted">Remplissez vos informations pour confirmer votre présence</p>
+                </div>
+                
+                <div class="bg-light rounded-3 p-4 mb-4">
+                    <h5 class="text-primary mb-2">{{ reunion.titre }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ reunion.lieu }}
+                    </p>
+                </div>
+                
+                <div class="alert alert-info border-0 mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Confirmation immédiate :</strong> Votre présence sera confirmée directement après avoir rempli ce formulaire.
+                </div>
+                
+                <form method="post" action="{% url 'presence_direct_confirm' reunion.qr_code_uuid %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1"></i>Adresse email
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ email }}" readonly style="background-color: #f8f9fa;">
+                        <div class="form-text">
+                            <i class="fas fa-shield-alt me-1 text-success"></i>
+                            Confirmation directe pour les emails externes
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="prenom" class="form-label">
+                                <i class="fas fa-user me-1"></i>Prénom *
+                            </label>
+                            <input type="text" class="form-control" id="prenom" name="prenom" 
+                                   placeholder="Votre prénom" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="nom" class="form-label">
+                                <i class="fas fa-user me-1"></i>Nom *
+                            </label>
+                            <input type="text" class="form-control" id="nom" name="nom" 
+                                   placeholder="Votre nom de famille" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="organisation" class="form-label">
+                            <i class="fas fa-building me-1"></i>Organisation *
+                        </label>
+                        <input type="text" class="form-control" id="organisation" name="organisation" 
+                               placeholder="Votre entreprise/organisation" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{% url 'presence_qr_redirect' reunion.qr_code_uuid %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Retour
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg px-4">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Confirmer ma Présence
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

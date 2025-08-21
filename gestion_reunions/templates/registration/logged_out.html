@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Déconnexion - Gestion des Réunions</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --orange-primary: #FF6B35;
+            --green-primary: #28A745;
+            --gray-light: #F8F9FA;
+            --gray-medium: #6C757D;
+            --white: #FFFFFF;
+            --shadow-light: 0 2px 10px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--orange-primary), #ff8c5a);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-container {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--orange-primary);
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            background: #e55a2b;
+            color: white;
+        }
+
+        .btn-outline-primary {
+            border: 2px solid var(--orange-primary);
+            color: var(--orange-primary);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+            background: transparent;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--orange-primary);
+            color: white;
+        }
+
+        .logo-icon {
+            color: var(--orange-primary);
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-icon {
+            color: var(--green-primary);
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: checkmark-animation 0.6s ease-in-out;
+        }
+
+        @keyframes checkmark-animation {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .logout-message {
+            color: var(--gray-medium);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .actions-container {
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-container">
+        <div class="mb-4">
+            <i class="fas fa-check-circle success-icon"></i>
+            <h2 class="h4 mb-3">Déconnexion Réussie</h2>
+            <p class="logout-message">
+                Vous avez été déconnecté(e) avec succès de votre session.<br>
+                Merci d'avoir utilisé notre système de gestion des réunions.
+            </p>
+        </div>
+        
+        <div class="actions-container">
+            <a href="/accounts/login/" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Se Reconnecter
+            </a>
+            
+            <a href="/" class="btn btn-outline-primary">
+                <i class="fas fa-home me-2"></i>Accueil
+            </a>
+        </div>
+        
+        <div class="mt-4">
+            <small class="text-muted">
+                <i class="fas fa-shield-alt me-1"></i>
+                Votre session a été fermée de manière sécurisée
+            </small>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirection après 10 secondes (optionnel)
+        setTimeout(function() {
+            // Vous pouvez décommenter la ligne suivante pour une redirection automatique
+            // window.location.href = "/accounts/login/";
+        }, 10000);
+        
+        // Alternative : redirection vers la page d'accueil
+        // setTimeout(function() {
+        //     window.location.href = "/";
+        // }, 10000);
+    </script>
+</body>
+</html>

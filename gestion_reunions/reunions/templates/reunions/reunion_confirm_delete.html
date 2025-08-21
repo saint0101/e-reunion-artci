@@ -1,0 +1,63 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Supprimer Réunion{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Supprimer la Réunion
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning border-0">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Attention !</strong> Cette action est irréversible et supprimera également :
+                    <ul class="mt-2 mb-0">
+                        <li>Toutes les demandes de présence ({{ reunion.presence_requests.count }})</li>
+                        <li>Tous les comptes-rendus associés ({{ reunion.comptes_rendus.count }})</li>
+                        <li>Le QR code généré</li>
+                    </ul>
+                </div>
+                
+                <p>Êtes-vous sûr de vouloir supprimer la réunion suivante ?</p>
+                
+                <div class="bg-light rounded p-3 mb-4">
+                    <h5 class="text-primary">{{ reunion.titre }}</h5>
+                    <p class="mb-1">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="mb-1">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ reunion.lieu }}
+                    </p>
+                    <p class="mb-1">
+                        <i class="fas fa-user me-2"></i>
+                        Organisateur: {{ reunion.organisateur.first_name }} {{ reunion.organisateur.last_name }}
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        {{ reunion.presence_requests.count }} participant(s) confirmé(s)
+                    </p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'reunion_detail' reunion.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Supprimer Définitivement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

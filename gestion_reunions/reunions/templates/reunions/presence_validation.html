@@ -1,0 +1,286 @@
+<!-- reunions/templates/reunions/presence_validation.html (version complète) -->
+{% extends 'reunions/base.html' %}
+
+{% block title %}Validation de Présence{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    {% if is_artci %}
+                        <i class="fas fa-building fa-4x text-success mb-3"></i>
+                        <h2 class="h4 mb-3 text-success">Validation ARTCI</h2>
+                        <span class="badge bg-success">Processus Simplifié</span>
+                    {% else %}
+                        <i class="fas fa-envelope-open-text fa-4x text-primary mb-3"></i>
+                        <h2 class="h4 mb-3">Validation de Présence</h2>
+                    {% endif %}
+                </div>
+                
+                <div class="bg-light rounded-3 p-4 mb-4">
+                    <h5 class="text-primary mb-2">{{ presence_request.reunion.titre }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ presence_request.reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ presence_request.reunion.lieu }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        {{ presence_request.email }}
+                        {% if is_artci %}
+                            <span class="badge bg-success ms-2">ARTCI</span>
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if presence_request.status == 'pending' %}
+                    {% if is_artci %}
+                        <!-- Formulaire simplifié pour ARTCI -->
+                        <div class="alert alert-success border-0 mb-4">
+                            <i class="fas fa-rocket me-2"></i>
+                            <strong>Validation ARTCI simplifiée !</strong><br>
+                            En tant que membre ARTCI, votre validation est automatique.
+                            Cliquez simplement sur "Confirmer" ci-dessous.
+                        </div>
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="bg-light rounded p-3 mb-4">
+                                <h6 class="text-success mb-2">
+                                    <i class="fas fa-magic me-2"></i>Informations automatiques
+                                </h6>
+                                <p class="mb-1"><strong>Organisation :</strong> ARTCI</p>
+                                <p class="mb-0"><strong>Statut :</strong> Membre interne</p>
+                                <small class="text-muted">
+                                    Les informations seront extraites automatiquement de votre email ARTCI.
+                                </small>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" name="action" value="confirm" class="btn btn-success btn-lg">
+                                    <i class="fas fa-check me-2"></i>
+                                    Confirmer ma Présence ARTCI
+                                </button>
+                                <button type="submit" name="action" value="cancel" class="btn btn-outline-danger">
+                                    <i class="fas fa-times me-2"></i>
+                                    Annuler
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <!-- Formulaire complet pour les externes -->
+                        <div class="alert alert-info border-0 mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Veuillez compléter vos informations pour finaliser votre inscription.
+                        </div>
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="nom" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Nom
+                                </label>
+                                <input type="text" class="form-control" id="nom" name="nom" 
+                                       placeholder="Votre nom de famille" value="{{ presence_request.nom }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="prenom" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Prénom
+                                </label>
+                                <input type="text" class="form-control" id="prenom" name="prenom" 
+                                       placeholder="Votre prénom" value="{{ presence_request.prenom }}">
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="organisation" class="form-label">
+                                    <i class="fas fa-building me-1"></i>Organisation
+                                </label>
+                                <input type="text" class="form-control" id="organisation" name="organisation" 
+                                       placeholder="Votre entreprise/organisation" value="{{ presence_request.organisation }}">
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                <button type="submit" name="action" value="confirm" class="btn btn-success btn-lg px-4">
+                                    <i class="fas fa-check me-2"></i>
+                                    Confirmer ma Présence
+                                </button>
+                                <button type="submit" name="action" value="cancel" class="btn btn-outline-danger btn-lg px-4">
+                                    <i class="fas fa-times me-2"></i>
+                                    Annuler
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                
+                {% elif presence_request.status == 'confirmed' %}
+                    <!-- État confirmé -->
+                    <div class="alert alert-success text-center border-0">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h5>Présence Confirmée !</h5>
+                        <p class="mb-2">Votre présence a été confirmée le {{ presence_request.confirmed_at|date:"d/m/Y à H:i" }}</p>
+                        
+                        {% if presence_request.nom or presence_request.prenom %}
+                        <div class="bg-white rounded p-3 mt-3">
+                            <h6 class="text-success mb-2">Vos informations enregistrées :</h6>
+                            {% if presence_request.prenom %}<p class="mb-1"><strong>Prénom :</strong> {{ presence_request.prenom }}</p>{% endif %}
+                            {% if presence_request.nom %}<p class="mb-1"><strong>Nom :</strong> {{ presence_request.nom }}</p>{% endif %}
+                            {% if presence_request.organisation %}<p class="mb-0"><strong>Organisation :</strong> {{ presence_request.organisation }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Informations pratiques -->
+                    <div class="card border-success mt-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Informations Pratiques
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>📅 Date :</strong><br>{{ presence_request.reunion.date_debut|date:"l d F Y" }}</p>
+                                    <p class="mb-2"><strong>🕐 Heure :</strong><br>{{ presence_request.reunion.date_debut|date:"H:i" }} - {{ presence_request.reunion.date_fin|date:"H:i" }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>📍 Lieu :</strong><br>{{ presence_request.reunion.lieu }}</p>
+                                    <p class="mb-0"><strong>👤 Organisateur :</strong><br>{{ presence_request.reunion.organisateur.first_name }} {{ presence_request.reunion.organisateur.last_name }}</p>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="text-center">
+                                <button class="btn btn-outline-success btn-sm" onclick="addToCalendar()">
+                                    <i class="fas fa-calendar-plus me-2"></i>
+                                    Ajouter au Calendrier
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="shareEvent()">
+                                    <i class="fas fa-share me-2"></i>
+                                    Partager
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                
+                {% elif presence_request.status == 'cancelled' %}
+                    <!-- État annulé -->
+                    <div class="alert alert-info text-center border-0">
+                        <i class="fas fa-info-circle fa-3x mb-3"></i>
+                        <h5>Présence Annulée</h5>
+                        <p class="mb-3">Vous avez annulé votre présence à cette réunion.</p>
+                        
+                        <!-- Option pour se réinscrire -->
+                        <div class="bg-white rounded p-3">
+                            <p class="mb-2">Vous avez changé d'avis ?</p>
+                            <form method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" name="action" value="reconfirm" class="btn btn-primary">
+                                    <i class="fas fa-redo me-2"></i>
+                                    Me Réinscrire
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Aide et contact -->
+                <div class="mt-4">
+                    <details class="bg-light rounded p-3">
+                        <summary class="fw-bold text-primary" style="cursor: pointer;">
+                            <i class="fas fa-question-circle me-2"></i>
+                            Besoin d'aide ?
+                        </summary>
+                        <div class="mt-3">
+                            <p class="mb-2"><strong>Questions fréquentes :</strong></p>
+                            <ul class="small">
+                                <li>Pour modifier vos informations, annulez et refaites une demande</li>
+                                <li>En cas de problème technique, contactez l'organisateur</li>
+                                <li>Vous recevrez un email de confirmation</li>
+                                <li>Le QR code reste valide jusqu'au début de la réunion</li>
+                            </ul>
+                            
+                            {% if presence_request.reunion.organisateur.email %}
+                            <p class="mb-0">
+                                <strong>Contact organisateur :</strong>
+                                <a href="mailto:{{ presence_request.reunion.organisateur.email }}">
+                                    {{ presence_request.reunion.organisateur.email }}
+                                </a>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addToCalendar() {
+    const startDate = new Date('{{ presence_request.reunion.date_debut|date:"c" }}');
+    const endDate = new Date('{{ presence_request.reunion.date_fin|date:"c" }}');
+    
+    const formatDate = (date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+    
+    const eventDetails = {
+        title: '{{ presence_request.reunion.titre|escapejs }}',
+        start: formatDate(startDate),
+        end: formatDate(endDate),
+        location: '{{ presence_request.reunion.lieu|escapejs }}',
+        description: '{{ presence_request.reunion.description|escapejs }}'
+    };
+    
+    // Google Calendar URL
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+        `&text=${encodeURIComponent(eventDetails.title)}` +
+        `&dates=${eventDetails.start}/${eventDetails.end}` +
+        `&location=${encodeURIComponent(eventDetails.location)}` +
+        `&details=${encodeURIComponent(eventDetails.description)}`;
+    
+    window.open(googleUrl, '_blank');
+}
+
+function shareEvent() {
+    const shareText = `Réunion: {{ presence_request.reunion.titre|escapejs }} - {{ presence_request.reunion.date_debut|date:"d/m/Y à H:i" }} à {{ presence_request.reunion.lieu|escapejs }}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ presence_request.reunion.titre|escapejs }}',
+            text: shareText,
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        // Fallback: copier dans le presse-papier
+        navigator.clipboard.writeText(shareText).then(() => {
+            alert('Informations copiées dans le presse-papier !');
+        }).catch(() => {
+            prompt('Copiez ces informations:', shareText);
+        });
+    }
+}
+
+// Animation d'entrée
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.querySelector('.card');
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+    
+    setTimeout(() => {
+        card.style.transition = 'all 0.6s ease';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+    }, 100);
+});
+</script>
+{% endblock %}

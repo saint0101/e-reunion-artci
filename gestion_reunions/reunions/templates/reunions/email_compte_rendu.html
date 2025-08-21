@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compte-rendu de Réunion</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #FF6B35, #ff8c5a); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content { 
+            padding: 30px; 
+        }
+        .reunion-info { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            border-left: 4px solid #FF6B35;
+        }
+        .reunion-info h3 {
+            color: #FF6B35;
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .attachment-info { 
+            background: #e8f5e8; 
+            border: 1px solid #28A745; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+        }
+        .attachment-info h4 {
+            color: #28A745;
+            margin-top: 0;
+            font-size: 16px;
+        }
+        .footer { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            text-align: center; 
+            color: #6c757d; 
+            font-size: 14px; 
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF6B35;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>📄 Compte-rendu de Réunion</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Nouveau document disponible</p>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour,</p>
+            
+            <p>Le compte-rendu de la réunion à laquelle vous avez participé est maintenant disponible.</p>
+            
+            <div class="reunion-info">
+                <h3>📅 {{ reunion.titre }}</h3>
+                <p><strong>📍 Lieu :</strong> {{ reunion.lieu }}</p>
+                <p><strong>🕐 Date :</strong> {{ reunion.date_debut|date:"l d F Y à H:i" }}</p>
+                <p><strong>👤 Organisateur :</strong> {{ reunion.organisateur.first_name }} {{ reunion.organisateur.last_name }}</p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ participant_count }}</div>
+                    <div class="stat-label">Participants</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ compte_rendu.version }}</div>
+                    <div class="stat-label">Version</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ compte_rendu.get_file_size }}</div>
+                    <div class="stat-label">Taille</div>
+                </div>
+            </div>
+            
+            <div class="attachment-info">
+                <h4>📎 Document joint</h4>
+                <p><strong>{{ compte_rendu.titre }}</strong></p>
+                <p>
+                    Version {{ compte_rendu.version }} • 
+                    {{ compte_rendu.get_file_extension }} • 
+                    {{ compte_rendu.get_file_size }}
+                </p>
+                <p><small>Créé par {{ compte_rendu.cree_par.first_name }} {{ compte_rendu.cree_par.last_name }} 
+                   le {{ compte_rendu.created_at|date:"d/m/Y à H:i" }}</small></p>
+            </div>
+            
+            <p>Le document est joint à cet email. Vous pouvez le télécharger et le consulter à tout moment.</p>
+            
+            <p><strong>💡 Informations importantes :</strong></p>
+            <ul>
+                <li>Ce document contient le résumé officiel de la réunion</li>
+                <li>Conservez-le pour vos archives</li>
+                <li>Si vous avez des questions, contactez le secrétaire de la réunion</li>
+            </ul>
+            
+            <p>Merci pour votre participation à cette réunion.</p>
+            
+            <p>Cordialement,<br>
+            <strong>{{ compte_rendu.cree_par.first_name }} {{ compte_rendu.cree_par.last_name }}</strong><br>
+            <em>Secrétaire de la réunion</em></p>
+        </div>
+        
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement par le système de gestion des réunions.</p>
+            <p>© 2024 Gestion des Réunions - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>

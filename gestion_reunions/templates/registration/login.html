@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestion des Réunions</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --orange-primary: #FF6B35;
+            --green-primary: #28A745;
+            --gray-light: #F8F9FA;
+            --gray-medium: #6C757D;
+            --white: #FFFFFF;
+            --shadow-light: 0 2px 10px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--orange-primary), #ff8c5a);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .btn-primary {
+            background: var(--orange-primary);
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            background: #e55a2b;
+        }
+
+        .form-control {
+            border-radius: var(--border-radius);
+            border: 1px solid #e0e0e0;
+            padding: 0.75rem 1rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--orange-primary);
+            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        }
+
+        .logo-icon {
+            color: var(--orange-primary);
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-text {
+            color: var(--gray-medium);
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="text-center mb-4">
+            <i class="fas fa-calendar-check logo-icon"></i>
+            <h2 class="h4 mb-3">Gestion des Réunions</h2>
+            <p class="welcome-text">Connectez-vous à votre espace</p>
+        </div>
+        
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="id_username" class="form-label">
+                    <i class="fas fa-user me-1"></i>Nom d'utilisateur
+                </label>
+                <input type="text" 
+                       class="form-control" 
+                       name="username" 
+                       id="id_username"
+                       placeholder="Votre nom d'utilisateur"
+                       value="{{ form.username.value|default:'' }}"
+                       required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_password" class="form-label">
+                    <i class="fas fa-lock me-1"></i>Mot de passe
+                </label>
+                <input type="password" 
+                       class="form-control" 
+                       name="password" 
+                       id="id_password"
+                       placeholder="Votre mot de passe"
+                       required>
+            </div>
+            
+            <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Se Connecter
+                </button>
+            </div>
+        </form>
+        
+        <div class="text-center">
+            <small class="text-muted">
+                Comptes de test : admin/admin123 ou secretaire/secret123
+            </small>
+        </div>
+    </div>
+</body>
+</html>

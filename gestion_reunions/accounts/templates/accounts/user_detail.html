@@ -1,0 +1,204 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}{{ form_user.first_name }} {{ form_user.last_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-circle me-2 text-primary"></i>
+                    Profil de {{ form_user.first_name }} {{ form_user.last_name }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user text-primary me-2"></i>Informations personnelles</h6>
+                        <p><strong>Nom complet :</strong> {{ form_user.first_name }} {{ form_user.last_name }}</p>
+                        <p><strong>Nom d'utilisateur :</strong> {{ form_user.username }}</p>
+                        <p><strong>Email :</strong> {{ form_user.email }}</p>
+                        <p><strong>Téléphone :</strong> {{ form_user.phone|default:"Non renseigné" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user-tag text-primary me-2"></i>Rôle et permissions</h6>
+                        <p><strong>Rôle :</strong> 
+                            {% if form_user.role == 'admin' %}
+                                <span class="badge bg-danger">{{ form_user.get_role_display }}</span>
+                            {% elif form_user.role == 'secretary' %}
+                                <span class="badge bg-warning">{{ form_user.get_role_display }}</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ form_user.get_role_display }}</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Statut :</strong> 
+                            {% if form_user.is_active %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Administrateur :</strong> 
+                            {% if form_user.is_staff %}
+                                <span class="badge bg-primary">Oui</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">Non</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calendar text-primary me-2"></i>Dates importantes</h6>
+                        <p><strong>Inscrit le :</strong> {{ form_user.date_joined|date:"d/m/Y à H:i" }}</p>
+                        <p><strong>Dernière connexion :</strong> 
+                            {% if form_user.last_login %}
+                                {{ form_user.last_login|date:"d/m/Y à H:i" }}
+                            {% else %}
+                                Jamais connecté
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if user.role == 'admin' %}
+                <div class="d-flex gap-2">
+                    <a href="{% url 'user_update' form_user.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Modifier
+                    </a>
+                    {% if form_user != user %}
+                    <a href="{% url 'user_delete' form_user.pk %}" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-2"></i>Supprimer
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Statistiques utilisateur -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Statistiques d'activité
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if form_user.role == 'secretary' %}
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ form_user.reunions_secretaire.count }}</h4>
+                        <small class="text-muted">Réunions gérées</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ form_user.compterendu_set.count }}</h4>
+                        <small class="text-muted">Comptes-rendus</small>
+                    </div>
+                </div>
+                {% elif form_user.role == 'admin' %}
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ form_user.reunions_organisees.count }}</h4>
+                        <small class="text-muted">Réunions organisées</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ total_users }}</h4>
+                        <small class="text-muted">Utilisateurs gérés</small>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center">
+                    <h4 class="text-primary">{{ presences_count }}</h4>
+                    <small class="text-muted">Participations confirmées</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Actions rapides -->
+        {% if user.role == 'admin' %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>
+                    Actions rapides
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if form_user.is_active %}
+                    <button class="btn btn-outline-warning btn-sm" onclick="toggleUserStatus({{ form_user.pk }}, false)">
+                        <i class="fas fa-ban me-2"></i>Désactiver
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-success btn-sm" onclick="toggleUserStatus({{ form_user.pk }}, true)">
+                        <i class="fas fa-check me-2"></i>Activer
+                    </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-info btn-sm" onclick="resetPassword({{ form_user.pk }})">
+                        <i class="fas fa-key me-2"></i>Reset Mot de passe
+                    </button>
+                    
+                    {% if form_user.email %}
+                    <a href="mailto:{{ form_user.email }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-envelope me-2"></i>Envoyer email
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleUserStatus(userId, activate) {
+    const action = activate ? 'activer' : 'désactiver';
+    if (confirm(`Êtes-vous sûr de vouloir ${action} cet utilisateur ?`)) {
+        // AJAX call pour changer le statut
+        fetch(`/api/user/${userId}/toggle-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({active: activate})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors du changement de statut');
+            }
+        });
+    }
+}
+
+function resetPassword(userId) {
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser le mot de passe ?')) {
+        // AJAX call pour reset password
+        fetch(`/api/user/${userId}/reset-password/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Nouveau mot de passe: ${data.new_password}`);
+            } else {
+                alert('Erreur lors de la réinitialisation');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

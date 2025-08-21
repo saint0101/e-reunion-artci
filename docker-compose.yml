@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: artci_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-gestion_reunions}
+      POSTGRES_USER: ${DB_USER:-e_reunion_artci}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_ereunion@20.25}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db_backup:/backup
+    ports:
+      - "5432:5432"
+    networks:
+      - edcp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-e_reunion_artci} -d ${DB_NAME:-gestion_reunions}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: artci_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - edcp_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application Django
+  web:
+    build: .
+    container_name: artci_e_reunion
+    command: sh -c "
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:80"
+    environment:
+      DEBUG: ${DEBUG:-False}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-this}
+      DATABASE_URL: postgresql://${DB_USER:-e_reunion_artci}:${DB_PASSWORD:-postgres_ereunion@20.25}@db:5432/${DB_NAME:-gestion_reunions}
+      DB_NAME: ${DB_NAME:-gestion_reunions}
+      DB_USER: ${DB_USER:-e_reunion_artci}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres_ereunion@20.25}
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/1
+
+      # Email
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USE_TLS: "True"
+      EMAIL_HOST_USER: warrensaint1@gmail.com
+      EMAIL_HOST_PASSWORD: "wcum uphk tocm cter"
+      DEFAULT_FROM_EMAIL: warrensaint1@gmail.com
+      
+      # Site configuration
+      SITE_NAME: "Plateforme e-REUNION AARTCI"
+      TITLE_PREFIX: "eREUNION"
+      SITE_PORT: ":80"
+      SITE_PROTOCOL: "http://"
+      SITE_ADDRESS: "196.216.227.105"
+      DEFAULT_LIST_SIZE: "10"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105"
+      
+    volumes:
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./logs:/app/logs
+    ports:
+      - "80:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edcp_network
+    restart: unless-stopped
+
+# Volumes pour la persistance des données
+volumes:
+  pgdata:
+    driver: local
+  redis_data:
+    driver: local
+  staticfiles_volume:
+    driver: local
+  uploads_volume:
+    driver: local
+  static_dev_volume:
+    driver: local
+
+# Réseau isolé pour la communication entre services
+networks:
+  edcp_network:
+    driver: bridge

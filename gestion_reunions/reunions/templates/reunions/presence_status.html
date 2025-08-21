@@ -1,0 +1,59 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Statut de Présence{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    {% if presence_request.status == 'confirmed' %}
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h2 class="h4 mb-3 text-success">Présence Confirmée</h2>
+                    {% elif presence_request.status == 'cancelled' %}
+                        <i class="fas fa-times-circle fa-4x text-danger mb-3"></i>
+                        <h2 class="h4 mb-3 text-danger">Présence Annulée</h2>
+                    {% else %}
+                        <i class="fas fa-clock fa-4x text-warning mb-3"></i>
+                        <h2 class="h4 mb-3 text-warning">En Attente</h2>
+                    {% endif %}
+                </div>
+                
+                <div class="bg-light rounded-3 p-4 mb-4">
+                    <h5 class="text-primary mb-2">{{ presence_request.reunion.titre }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ presence_request.reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ presence_request.reunion.lieu }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        {{ presence_request.email }}
+                    </p>
+                </div>
+                
+                {% if presence_request.status == 'confirmed' %}
+                    <div class="alert alert-success border-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Votre présence a été confirmée le {{ presence_request.confirmed_at|date:"d/m/Y à H:i" }}
+                    </div>
+                {% elif presence_request.status == 'cancelled' %}
+                    <div class="alert alert-info border-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Vous avez annulé votre présence à cette réunion.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning border-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Votre demande est en attente de validation.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
