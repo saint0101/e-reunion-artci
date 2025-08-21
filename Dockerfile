@@ -52,17 +52,18 @@ USER appuser
 # Collecter les fichiers statiques
 WORKDIR /app/gestion_reunions
 RUN python manage.py collectstatic --noinput
-WORKDIR /app
+#WORKDIR /app
 # RUN python manage.py collectstatic --noinput
 
 # Exposer le port
 EXPOSE 80
 
 # Script d'entrée
-COPY docker-entrypoint.sh /app/
+WORKDIR /app/gestion_reunions
+COPY docker-entrypoint.sh /app/gestion_reunions/
 USER root
-RUN chmod +x /app/docker-entrypoint.sh
+RUN chmod +x /app/gestion_reunions/docker-entrypoint.sh
 USER appuser
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+ENTRYPOINT ["/app/gestion_reunions/docker-entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "3", "gestion_reunions.wsgi:application"]
