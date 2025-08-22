@@ -594,6 +594,7 @@ def send_compte_rendu(request, pk):
     return JsonResponse({'success': False})
 
 
+"""
 def build_validation_url_ext(token):
     protocol = 'https' if getattr(settings, 'SECURE_SSL_REDIRECT', False) else 'http'
 
@@ -602,6 +603,27 @@ def build_validation_url_ext(token):
     else:
         host = settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS and settings.ALLOWED_HOSTS[0] != '*' else 'localhost:8000'
         base_url = f"{protocol}://{host}"
+
+    return f"{base_url}/validation/{token}/"
+"""
+
+
+def build_validation_url_ext(token):
+    """
+    Construit l'URL complète de validation pour les QR codes
+    en forçant l'IP publique et le port correct.
+    """
+    # On force le protocole (http ou https)
+    protocol = 'https' if getattr(settings, 'SECURE_SSL_REDIRECT', False) else 'http'
+
+    # Si SITE_URL est défini, on l'utilise
+    if getattr(settings, 'SITE_URL', ''):
+        base_url = settings.SITE_URL.rstrip('/')
+    else:
+        # Sinon, on force l'IP publique et le port désiré
+        public_ip = '196.216.227.105'
+        port = '80'  # ou '80' si tu passes Gunicorn sur le port 80
+        base_url = f"{protocol}://{public_ip}:{port}"
 
     return f"{base_url}/validation/{token}/"
 
