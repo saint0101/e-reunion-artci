@@ -54,7 +54,7 @@ def get_site_url(request=None):
         # Fallback pour les contextes sans request
         protocol = os.environ.get('SITE_PROTOCOL', 'http://')
         address = os.environ.get('SITE_ADDRESS', '196.216.227.105')
-        port = os.environ.get('SITE_PORT', ':8080')
+        port = os.environ.get('SITE_PORT', ':80')
         return f"{protocol}{address}{port}"
 
 SITE_URL = get_site_url()
@@ -198,7 +198,7 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 # CUSTOM SETTINGS
 SITE_NAME = os.environ.get('SITE_NAME', 'Plateforme e-REUNION ARTCI')
 TITLE_PREFIX = os.environ.get('TITLE_PREFIX', 'eREUNION')
-SITE_PORT = os.environ.get('SITE_PORT', ':8080')
+SITE_PORT = os.environ.get('SITE_PORT', ':80')
 SITE_PROTOCOL = os.environ.get('SITE_PROTOCOL', 'http://')
 DEFAULT_LIST_SIZE = int(os.environ.get('DEFAULT_LIST_SIZE', 10))
 

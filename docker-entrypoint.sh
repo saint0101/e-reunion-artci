@@ -17,7 +17,7 @@ check_env_vars() {
     echo "   - Database: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
     echo "   - User: ${DB_USER}"
     echo "   - Working dir: $(pwd)"
-    echo "   - IP publique: 196.216.227.105:8080"
+    echo "   - IP publique: 196.216.227.105:80"
 }
 
 # Créer les répertoires nécessaires
@@ -112,19 +112,19 @@ main() {
     echo ""
     echo "🌐 Informations de connexion:"
     echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "   📱 URL publique: http://196.216.227.105:8080"
+    echo "   📱 URL publique: http://196.216.227.105:80"
     echo "   🏠 URL locale:   http://172.16.0.153:8080"
     echo "   👤 Admin:        ${DJANGO_SUPERUSER_USERNAME:-admin}"
     echo "   🔑 Password:     ${DJANGO_SUPERUSER_PASSWORD:-admin123}"
-    echo "   🔧 Admin panel:  http://196.216.227.105:8080/admin"
+    echo "   🔧 Admin panel:  http://196.216.227.105:80/admin"
     echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    echo "🚀 Démarrage de Gunicorn sur 0.0.0.0:8080..."
+    echo "🚀 Démarrage de Gunicorn sur 0.0.0.0:80..."
     
     # ✅ CORRECTION FINALE: Gunicorn avec logs vers stdout/stderr
     exec gunicorn gestion_reunions.wsgi:application \
-        --bind 0.0.0.0:8080 \
+        --bind 0.0.0.0:80 \
         --workers 3 \
         --worker-class gthread \
         --worker-connections 1000 \

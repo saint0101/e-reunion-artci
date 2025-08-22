@@ -88,7 +88,7 @@ services:
       - staticfiles_volume:/app/staticfiles
     ports:
       # ✅ CORRECTION: Exposer sur toutes les interfaces pour l'IP publique
-      - "0.0.0.0:8080:8080"  # Accessible depuis l'IP publique
+      - "0.0.0.0:80:80"  # Accessible depuis l'IP publique
     depends_on:
       db:
         condition: service_healthy

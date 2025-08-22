@@ -54,11 +54,11 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 USER appuser
 
 # Exposer le port 8080
-EXPOSE 8080
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
+    CMD curl -f http://localhost:80/ || exit 1
 
 # Point d'entrée - UTILISER LE SCRIPT
 ENTRYPOINT ["docker-entrypoint.sh"]
