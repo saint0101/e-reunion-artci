@@ -78,8 +78,66 @@ class Reunion(models.Model):
         if is_new or not self.qr_code_image:
             self.generate_qr_code()
     
+
     def generate_qr_code(self):
         """Génère le QR code pour cette réunion"""
+        try:
+            from django.conf import settings
+            
+            # ✅ CORRECTION: Utiliser l'IP publique configurée
+            site_protocol = getattr(settings, 'SITE_PROTOCOL', 'http://')
+            site_address = getattr(settings, 'SITE_ADDRESS', '196.216.227.105')
+            site_port = getattr(settings, 'SITE_PORT', '')
+            
+            # Construire l'URL de base
+            if site_port:
+                base_url = f"{site_protocol}{site_address}:{site_port}"
+            else:
+                base_url = f"{site_protocol}{site_address}"
+            
+            # URL complète pour le QR code avec l'IP publique
+            qr_url = f"{base_url}/presence/{self.qr_code_uuid}/"
+            
+            print(f"🔗 Génération QR code avec URL: {qr_url}")  # Debug
+            
+            # Créer le QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(qr_url)
+            qr.make(fit=True)
+            
+            # Créer l'image
+            qr_image = qr.make_image(fill_color="black", back_color="white")
+            
+            # Sauvegarder dans un buffer
+            buffer = BytesIO()
+            qr_image.save(buffer, format='PNG')
+            buffer.seek(0)
+            
+            # Sauvegarder le fichier
+            filename = f'qr_reunion_{self.id}_{self.qr_code_uuid.hex[:8]}.png'
+            self.qr_code_image.save(
+                filename,
+                File(buffer),
+                save=False
+            )
+            
+            # Sauvegarder seulement le champ image
+            super().save(update_fields=['qr_code_image'])
+            
+            print(f"✅ QR code généré avec succès: {filename}")  # Debug
+            
+        except Exception as e:
+            print(f"❌ Erreur lors de la génération du QR code: {e}")
+            import traceback
+            traceback.print_exc()  # Debug détaillé
+
+    """def generate_qr_code(self):
+        Génère le QR code pour cette réunion
         try:
             # URL complète pour le QR code
             qr_url = f"http://172.20.10.2:8000/presence/{self.qr_code_uuid}/"
@@ -114,7 +172,9 @@ class Reunion(models.Model):
             super().save(update_fields=['qr_code_image'])
             
         except Exception as e:
-            print(f"Erreur lors de la génération du QR code: {e}")
+            print(f"Erreur lors de la génération du QR code: {e}")  """
+    
+
     
     def get_absolute_url(self):
         return reverse('reunion_detail', args=[str(self.id)])
