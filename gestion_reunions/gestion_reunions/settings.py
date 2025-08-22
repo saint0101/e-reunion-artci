@@ -147,26 +147,40 @@ USE_I18N = True
 USE_TZ = True
 
 # ✅ CORRECTION: Configuration des fichiers statiques
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+#STATIC_URL = '/static/'
+#STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 
 # ✅ VÉRIFICATION: Créer le dossier static s'il n'existe pas
-static_dir = BASE_DIR / 'static'
-if not static_dir.exists():
-    static_dir.mkdir(parents=True, exist_ok=True)
+#static_dir = BASE_DIR / 'static'
+#if not static_dir.exists():
+#    static_dir.mkdir(parents=True, exist_ok=True)
 
-STATICFILES_DIRS = [static_dir]
+#STATICFILES_DIRS = [static_dir]
 
 # Configuration pour servir les fichiers statiques avec WhiteNoise
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+# Media files
+#MEDIA_URL = '/media/'
+#MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Créer les dossiers média s'ils n'existent pas
-os.makedirs(MEDIA_ROOT, exist_ok=True)
-os.makedirs(MEDIA_ROOT / 'qr_codes', exist_ok=True)
-os.makedirs(MEDIA_ROOT / 'comptes_rendus', exist_ok=True)
+#os.makedirs(MEDIA_ROOT, exist_ok=True)
+#os.makedirs(MEDIA_ROOT / 'qr_codes', exist_ok=True)
+#os.makedirs(MEDIA_ROOT / 'comptes_rendus', exist_ok=True)
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

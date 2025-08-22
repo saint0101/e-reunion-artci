@@ -110,6 +110,7 @@ volumes:
     driver: local
   static_dev_volume:
     driver: local
+  
 
 # Réseau isolé pour la communication entre services
 networks:
