@@ -24,7 +24,8 @@ AUTH_USER_MODEL = 'reunions.CustomUser'
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = True
 
 # ✅ CORRECTION PRINCIPALE: ALLOWED_HOSTS avec toutes les IPs qui vous accèdent
 """
