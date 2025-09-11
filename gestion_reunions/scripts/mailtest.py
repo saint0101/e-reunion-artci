@@ -2,10 +2,10 @@ import smtplib
 import ssl
 
 port = 587  # TLS
-smtp_server = "smtp.gmail.com"
-sender_email = "warrensaint1@gmail.com"
-receiver_email = "fouriersaint@gmail.com"
-password = "wcum uphk tocm cter"
+smtp_server = "smtp.office365.com"
+sender_email = "qrmeeting@artci.ci"
+receiver_email = "nguessan.saintfourier@artci.ci"
+password = "Admin/QR25"
 
 message = """\
 Subject: Test SMTP brut
