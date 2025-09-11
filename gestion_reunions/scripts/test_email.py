@@ -35,8 +35,8 @@ def test_simple_email():
     
     try:
         result = send_mail(
-            subject='Test - Gestion des Réunions',
-            message='Ceci est un test d\'envoi d\'email depuis l\'application Gestion des Réunions.',
+            subject='Test - QR Meeting',
+            message='Ceci est un test d\'envoi d\'email depuis l\'application QR Meeting.',
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=['fouriersaint@gmail.com'],
             fail_silently=False,
@@ -70,7 +70,7 @@ def test_html_email():
             <h1>🧪 Test Email HTML</h1>
         </div>
         <div class="content">
-            <p>Ceci est un test d'email HTML depuis l'application <strong>Gestion des Réunions</strong>.</p>
+            <p>Ceci est un test d'email HTML depuis l'application <strong>QR Meeting</strong>.</p>
             <p>Si vous recevez cet email, la configuration fonctionne correctement ! ✅</p>
         </div>
     </body>
@@ -78,15 +78,15 @@ def test_html_email():
     """
     
     text_content = """
-    Test Email - Gestion des Réunions
+    Test Email - QR Meeting
     
-    Ceci est un test d'email depuis l'application Gestion des Réunions.
+    Ceci est un test d'email depuis l'application QR Meetin.
     Si vous recevez cet email, la configuration fonctionne correctement !
     """
     
     try:
         email = EmailMultiAlternatives(
-            subject='Test HTML - Gestion des Réunions',
+            subject='Test HTML - QR Meeting',
             body=text_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=['fouriersaint@gmail.com']

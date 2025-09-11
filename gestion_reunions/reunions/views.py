@@ -421,7 +421,7 @@ Vous avez demandé à confirmer votre présence à la réunion « {presence_requ
 En cas de désistement, vous pourrez également le signaler depuis cette page.
 
 Merci,
-L’équipe de gestion des réunions
+L’équipe de QR Meeting
 
 ---
 Ce message est automatique. Merci de ne pas y répondre.
@@ -670,7 +670,7 @@ Pour confirmer votre présence, cliquez sur ce lien :
 Si vous ne souhaitez plus participer, vous pourrez l’indiquer sur la page de validation.
 
 Merci,
-L’équipe de gestion des réunions
+L’équipe dE QR Meeting
 
 ---
 Ce message a été généré automatiquement. Merci de ne pas y répondre.
@@ -759,7 +759,7 @@ Cordialement,
 Secrétaire de la réunion
 
 ---
-Cet email a été envoyé automatiquement par le système de gestion des réunions.
+Cet email a été envoyé automatiquement par QR Meeting.
 """
     
     # Préparer la liste des emails

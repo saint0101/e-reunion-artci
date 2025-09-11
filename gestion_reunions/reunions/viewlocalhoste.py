@@ -393,7 +393,7 @@ Pour confirmer votre présence, cliquez simplement sur le lien suivant :
 Aucune information supplémentaire n'est requise.
 
 Cordialement,
-L'équipe de gestion des réunions ARTCI
+L'équipe QR Meeting
 
 ---
 Cet email a été envoyé automatiquement. 
@@ -478,7 +478,7 @@ Sur la page de validation, vous pourrez compléter vos informations (nom, préno
 Si vous ne souhaitez plus participer à cette réunion, vous pourrez l'indiquer sur la page de validation.
 
 Cordialement,
-L'équipe de gestion des réunions
+L'équipe de QR Meeting
 
 ---
 Cet email a été envoyé automatiquement. Merci de ne pas y répondre.
@@ -709,7 +709,7 @@ Ou copiez ce lien dans votre navigateur.
 Si vous ne souhaitez plus participer à cette réunion, vous pourrez l'indiquer sur la page de validation.
 
 Cordialement,
-L'équipe de gestion des réunions
+L'équipe de QR Meeting
 
 ---
 Cet email a été envoyé automatiquement. Merci de ne pas y répondre.
@@ -800,7 +800,7 @@ Cordialement,
 Secrétaire de la réunion
 
 ---
-Cet email a été envoyé automatiquement par le système de gestion des réunions.
+Cet email a été envoyé automatiquement par QR Meeting.
 """
     
     # Préparer la liste des emails

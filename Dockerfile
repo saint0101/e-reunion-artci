@@ -3,7 +3,7 @@ FROM python:3.12-slim
 
 # Métadonnées
 LABEL maintainer="ARTCI <artci@artci.ci>"
-LABEL description="Application de gestion des réunions ARTCI"
+LABEL description="Application de gestion des réunions ARTCI (QR Meeting)"
 LABEL version="1.0"
 
 # Variables d'environnement pour Python

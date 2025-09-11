@@ -142,6 +142,6 @@ class CompteRenduAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('reunion', 'cree_par')
 
 # Configuration de l'admin
-admin.site.site_header = "Administration - Gestion des Réunions"
+admin.site.site_header = "Administration - Gestion des Réunions (QR Meeting)"
 admin.site.site_title = "Gestion Réunions"
 admin.site.index_title = "Panneau d'administration"
