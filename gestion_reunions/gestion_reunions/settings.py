@@ -217,8 +217,8 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False  # TRÈS IMPORTANT : False pour Office 365
 EMAIL_HOST_USER = 'qrmeeting@artci.ci'
 EMAIL_HOST_PASSWORD = 'Admin/QR25'  # Vérifiez que c'est exactement ça
-DEFAULT_FROM_EMAIL = 'qrmeeting@artci.ci'
-# DEFAULT_FROM_EMAIL = formataddr(("QR Meeting", "qrmeeting@artci.ci"))
+# DEFAULT_FROM_EMAIL = 'qrmeeting@artci.ci'
+DEFAULT_FROM_EMAIL = formataddr(("QR Meeting", "qrmeeting@artci.ci"))
 
 # DEFAULT_FROM_EMAIL = "QR Meeting <qrmeeting@artci.ci>"
 

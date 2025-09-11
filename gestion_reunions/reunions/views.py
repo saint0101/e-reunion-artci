@@ -437,13 +437,12 @@ Ce message est automatique. Merci de ne pas y répondre.
         print(f"📤 Backend configuré : {settings.EMAIL_BACKEND}")
 
         # Création du nom d'expéditeur avec formataddr
-        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
+        # sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
 
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=sender_name,
-            #from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=settings.DEFAULT_FROM_EMAIL,
             to=[presence_request.email]
         )
 
@@ -690,13 +689,12 @@ Ce message a été généré automatiquement. Merci de ne pas y répondre.
     try:
         print(f"📧 Envoi à : {presence_request.email}")
 
-        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
-
+        # ender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
 
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=sender_name,
+            from_email=settings.DEFAULT_FROM_EMAIL,
             to=[presence_request.email]
         )
 
@@ -712,7 +710,6 @@ Ce message a été généré automatiquement. Merci de ne pas y répondre.
         print(f"❌ Erreur lors de l’envoi : {e}")
         print(f"   À : {presence_request.email}")
         print(f"   De : {settings.DEFAULT_FROM_EMAIL}")
-        print(f"   De : {sender_name}")
 
         return False
     
@@ -785,14 +782,14 @@ Cet email a été envoyé automatiquement par QR Meeting.
         print(f"📤 Backend email: {settings.EMAIL_BACKEND}")
 
         # Création du nom d'expéditeur avec formataddr
-        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
+        # sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
 
         
         # Créer l'email
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=sender_name,
+            from_email=settings.DEFAULT_FROM_EMAIL,
             to=recipient_list
         )
         
@@ -939,13 +936,12 @@ Ce message est automatique. Merci de ne pas y répondre.
         print(f"📤 Backend configuré : {settings.EMAIL_BACKEND}")
 
         # Création du nom d'expéditeur avec formataddr
-        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
-
+        #sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
 
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=sender_name,
+            from_email=settings.DEFAULT_FROM_EMAIL,
             to=[presence_request.email]
         )
 
