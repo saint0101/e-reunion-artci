@@ -14,6 +14,8 @@ from .forms import ReunionForm, PresenceForm, CompteRenduForm
 from .utils import generate_presence_report, send_compte_rendu_email
 import json
 
+
+
 # Dashboard Views
 @login_required
 def dashboard(request):
@@ -807,4 +809,134 @@ Cet email a été envoyé automatiquement par QR Meeting.
         print(f"❌ Erreur lors de l'envoi du compte-rendu: {e}")
         print(f"   Destinataires: {recipient_list}")
         print(f"   From: {settings.DEFAULT_FROM_EMAIL}")
+        return False
+
+
+def debug_email_config(request):
+    """Debug de la configuration email"""
+    
+    config_info = {
+        'EMAIL_BACKEND': getattr(settings, 'EMAIL_BACKEND', 'Non défini'),
+        'EMAIL_HOST': getattr(settings, 'EMAIL_HOST', 'Non défini'),
+        'EMAIL_PORT': getattr(settings, 'EMAIL_PORT', 'Non défini'),
+        'EMAIL_USE_TLS': getattr(settings, 'EMAIL_USE_TLS', 'Non défini'),
+        'EMAIL_USE_SSL': getattr(settings, 'EMAIL_USE_SSL', 'Non défini'),
+        'EMAIL_HOST_USER': getattr(settings, 'EMAIL_HOST_USER', 'Non défini'),
+        'EMAIL_HOST_PASSWORD': '***masqué***' if getattr(settings, 'EMAIL_HOST_PASSWORD', None) else 'Non défini',
+        'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', 'Non défini'),
+        'EMAIL_TIMEOUT': getattr(settings, 'EMAIL_TIMEOUT', 'Non défini'),
+    }
+    
+    # Variables d'environnement
+    env_vars = {
+        'EMAIL_HOST': os.environ.get('EMAIL_HOST', 'Non défini'),
+        'EMAIL_PORT': os.environ.get('EMAIL_PORT', 'Non défini'),
+        'EMAIL_HOST_USER': os.environ.get('EMAIL_HOST_USER', 'Non défini'),
+        'EMAIL_HOST_PASSWORD': '***masqué***' if os.environ.get('EMAIL_HOST_PASSWORD') else 'Non défini',
+        'DEFAULT_FROM_EMAIL': os.environ.get('DEFAULT_FROM_EMAIL', 'Non défini'),
+    }
+    
+    return JsonResponse({
+        'django_settings': config_info,
+        'environment_variables': env_vars,
+        'settings_file_path': settings.__file__ if hasattr(settings, '__file__') else 'Inconnu'
+    }, json_dumps_params={'indent': 2})
+
+
+
+
+# Modifiez temporairement votre fonction send_artci_validation_email pour plus de debug
+def send_artci_validation_email_debug(presence_request):
+    """Version debug de l'envoi d'email"""
+    
+    print("=== DEBUG EMAIL CONFIGURATION ===")
+    print(f"EMAIL_BACKEND: {settings.EMAIL_BACKEND}")
+    print(f"EMAIL_HOST: {settings.EMAIL_HOST}")
+    print(f"EMAIL_PORT: {settings.EMAIL_PORT}")
+    print(f"EMAIL_USE_TLS: {settings.EMAIL_USE_TLS}")
+    print(f"EMAIL_USE_SSL: {getattr(settings, 'EMAIL_USE_SSL', 'Non défini')}")
+    print(f"EMAIL_HOST_USER: {settings.EMAIL_HOST_USER}")
+    print(f"EMAIL_HOST_PASSWORD: {'***défini***' if settings.EMAIL_HOST_PASSWORD else '***NON DÉFINI***'}")
+    print(f"DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}")
+    print("=====================================")
+    
+    subject = f"Validation de présence - {presence_request.reunion.titre}"
+    validation_url = build_validation_url_artci(presence_request.validation_token)
+
+    print(f"🔗 URL de validation générée: {validation_url}")
+
+    # Contexte du template
+    context = {
+        'presence_request': presence_request,
+        'validation_url': validation_url,
+        'reunion': presence_request.reunion,
+    }
+
+    # Essayer de rendre le contenu HTML
+    try:
+        html_content = render_to_string('reunions/email_validation.html', context)
+    except Exception as e:
+        print(f"⚠️ Erreur lors du rendu du template HTML : {e}")
+        html_content = None
+
+    # Contenu texte brut (fallback)
+    text_content = f"""
+Bonjour,
+
+Vous avez demandé à confirmer votre présence à la réunion « {presence_request.reunion.titre} ».
+
+📅 Date : {presence_request.reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
+📍 Lieu : {presence_request.reunion.lieu}
+👤 Organisateur : {presence_request.reunion.organisateur.first_name} {presence_request.reunion.organisateur.last_name}
+
+👉 Cliquez sur le lien suivant pour confirmer votre présence :
+{validation_url}
+
+(Si le lien ne fonctionne pas, copiez-le dans votre navigateur.)
+
+En cas de désistement, vous pourrez également le signaler depuis cette page.
+
+Merci,
+L'équipe de QR Meeting
+
+---
+Ce message est automatique. Merci de ne pas y répondre.
+"""
+
+    # Test de connexion SMTP avant envoi
+    import smtplib
+    try:
+        print("🔗 Test de connexion SMTP...")
+        server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+        server.starttls()
+        server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+        server.quit()
+        print("✅ Connexion SMTP réussie")
+    except Exception as smtp_error:
+        print(f"❌ Erreur de connexion SMTP : {smtp_error}")
+        return False
+
+    # Envoi de l'email
+    try:
+        print(f"📧 Envoi de l'email à : {presence_request.email}")
+        print(f"📤 Backend configuré : {settings.EMAIL_BACKEND}")
+
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[presence_request.email]
+        )
+
+        if html_content:
+            email.attach_alternative(html_content, "text/html")
+
+        result = email.send()
+        print(f"✅ Email envoyé avec succès à {presence_request.email} (résultat : {result})")
+        return True
+
+    except Exception as e:
+        print(f"❌ Erreur lors de l'envoi de l'email : {e}")
+        print(f"   Destinataire : {presence_request.email}")
+        print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
         return False
