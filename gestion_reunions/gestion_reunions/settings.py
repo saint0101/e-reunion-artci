@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from decouple import config
+from email.utils import formataddr
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -216,6 +218,8 @@ EMAIL_USE_SSL = False  # TRÈS IMPORTANT : False pour Office 365
 EMAIL_HOST_USER = 'qrmeeting@artci.ci'
 EMAIL_HOST_PASSWORD = 'Admin/QR25'  # Vérifiez que c'est exactement ça
 DEFAULT_FROM_EMAIL = 'qrmeeting@artci.ci'
+# DEFAULT_FROM_EMAIL = formataddr(("QR Meeting", "qrmeeting@artci.ci"))
+
 # DEFAULT_FROM_EMAIL = "QR Meeting <qrmeeting@artci.ci>"
 
 

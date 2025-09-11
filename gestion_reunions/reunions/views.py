@@ -783,12 +783,16 @@ Cet email a été envoyé automatiquement par QR Meeting.
     try:
         print(f"📧 Tentative d'envoi compte-rendu à {len(recipient_list)} participants")
         print(f"📤 Backend email: {settings.EMAIL_BACKEND}")
+
+        # Création du nom d'expéditeur avec formataddr
+        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
+
         
         # Créer l'email
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=sender_name,
             to=recipient_list
         )
         
@@ -934,10 +938,14 @@ Ce message est automatique. Merci de ne pas y répondre.
         print(f"📧 Envoi de l'email à : {presence_request.email}")
         print(f"📤 Backend configuré : {settings.EMAIL_BACKEND}")
 
+        # Création du nom d'expéditeur avec formataddr
+        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
+
+
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=sender_name,
             to=[presence_request.email]
         )
 
