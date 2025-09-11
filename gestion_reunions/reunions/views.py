@@ -407,7 +407,8 @@ def send_artci_validation_email(presence_request):
         print(f"⚠️ Erreur lors du rendu du template HTML : {e}")
         html_content = None
 
-    # Contenu texte brut (fallback)
+    # Contenu texte brut (fallback) 👤 Organisateur : {presence_request.reunion.organisateur.first_name} {presence_request.reunion.organisateur.last_name}
+
     text_content = f"""
 Bonjour,
 
@@ -415,7 +416,8 @@ Vous avez demandé à confirmer votre présence à la réunion « {presence_requ
 
 📅 Date : {presence_request.reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
 📍 Lieu : {presence_request.reunion.lieu}
-👤 Organisateur : {presence_request.reunion.organisateur.first_name} {presence_request.reunion.organisateur.last_name}
+👤 Organisateur : ARTCI
+
 
 👉 Cliquez sur le lien suivant pour confirmer votre présence :
 {validation_url}
@@ -893,7 +895,7 @@ def send_artci_validation_email_debug(presence_request):
         print(f"⚠️ Erreur lors du rendu du template HTML : {e}")
         html_content = None
 
-    # Contenu texte brut (fallback)
+    # Contenu texte brut (fallback) 👤 Organisateur : {presence_request.reunion.organisateur.first_name} {presence_request.reunion.organisateur.last_name}
     text_content = f"""
 Bonjour,
 
@@ -901,7 +903,7 @@ Vous avez demandé à confirmer votre présence à la réunion « {presence_requ
 
 📅 Date : {presence_request.reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
 📍 Lieu : {presence_request.reunion.lieu}
-👤 Organisateur : {presence_request.reunion.organisateur.first_name} {presence_request.reunion.organisateur.last_name}
+👤 Organisateur : ARTCI
 
 👉 Cliquez sur le lien suivant pour confirmer votre présence :
 {validation_url}
