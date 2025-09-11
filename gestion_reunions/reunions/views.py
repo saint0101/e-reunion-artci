@@ -13,6 +13,8 @@ from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
 from .forms import ReunionForm, PresenceForm, CompteRenduForm
 from .utils import generate_presence_report, send_compte_rendu_email
 import json
+from email.utils import formataddr
+
 
 
 
@@ -420,7 +422,7 @@ Vous avez demandé à confirmer votre présence à la réunion « {presence_requ
 
 (Si le lien ne fonctionne pas, copiez-le dans votre navigateur.)
 
-En cas de désistement, vous pourrez également le signaler depuis cette page.
+En cas de désistement, vous pourrez également le signaler depuis cette page. 
 
 Merci,
 L’équipe de QR Meeting
@@ -434,10 +436,14 @@ Ce message est automatique. Merci de ne pas y répondre.
         print(f"📧 Envoi de l'email à : {presence_request.email}")
         print(f"📤 Backend configuré : {settings.EMAIL_BACKEND}")
 
+        # Création du nom d'expéditeur avec formataddr
+        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
+
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=sender_name,
+            #from_email=settings.DEFAULT_FROM_EMAIL,
             to=[presence_request.email]
         )
 
@@ -451,7 +457,9 @@ Ce message est automatique. Merci de ne pas y répondre.
     except Exception as e:
         print(f"❌ Erreur lors de l’envoi de l’email : {e}")
         print(f"   Destinataire : {presence_request.email}")
-        print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
+        #print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
+        print(f"   Expéditeur : {sender_name}")
+
         return False
     
 
@@ -682,10 +690,13 @@ Ce message a été généré automatiquement. Merci de ne pas y répondre.
     try:
         print(f"📧 Envoi à : {presence_request.email}")
 
+        sender_name = formataddr(("QR Meeting", settings.DEFAULT_FROM_EMAIL))
+
+
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=sender_name,
             to=[presence_request.email]
         )
 
@@ -701,6 +712,8 @@ Ce message a été généré automatiquement. Merci de ne pas y répondre.
         print(f"❌ Erreur lors de l’envoi : {e}")
         print(f"   À : {presence_request.email}")
         print(f"   De : {settings.DEFAULT_FROM_EMAIL}")
+        print(f"   De : {sender_name}")
+
         return False
     
 
