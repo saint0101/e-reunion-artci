@@ -62,7 +62,7 @@ services:
       EMAIL_USE_TLS: "True"
       EMAIL_HOST_USER: qrmeeting@artci.ci
       EMAIL_HOST_PASSWORD: "Admin/QR25"
-      DEFAULT_FROM_EMAIL: qrmeeting@artci.ci. 
+      DEFAULT_FROM_EMAIL: qrmeeting@artci.ci
 
       
       # Site configuration pour IP publique
