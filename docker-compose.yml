@@ -60,9 +60,10 @@ services:
       EMAIL_HOST: smtp.gmail.com
       EMAIL_PORT: 587
       EMAIL_USE_TLS: "True"
-      EMAIL_HOST_USER: warrensaint1@gmail.com
-      EMAIL_HOST_PASSWORD: "wcum uphk tocm cter"
-      DEFAULT_FROM_EMAIL: warrensaint1@gmail.com
+      EMAIL_HOST_USER: qrmeeting@artci.ci
+      EMAIL_HOST_PASSWORD: "Admin/QR25"
+      DEFAULT_FROM_EMAIL: qrmeeting@artci.ci. 
+
       
       # Site configuration pour IP publique
       SITE_NAME: "Plateforme e-REUNION ARTCI"
