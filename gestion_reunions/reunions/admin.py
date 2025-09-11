@@ -143,5 +143,5 @@ class CompteRenduAdmin(admin.ModelAdmin):
 
 # Configuration de l'admin
 admin.site.site_header = "Administration - Gestion des Réunions (QR Meeting)"
-admin.site.site_title = "Gestion Réunions"
+admin.site.site_title = "QR Meeting Admin"
 admin.site.index_title = "Panneau d'administration"

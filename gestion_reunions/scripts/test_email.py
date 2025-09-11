@@ -154,7 +154,7 @@ def configure_gmail():
     print("   - Allez sur https://myaccount.google.com/security")
     print("   - Cliquez sur 'Mots de passe d'application'")
     print("   - Générez un nouveau mot de passe pour 'Autre (nom personnalisé)'")
-    print("   - Nommez-le 'Gestion Réunions'")
+    print("   - Nommez-le 'QR Meeting' et copiez le mot de passe généré")
     print()
     print("3. ⚙️ Mettez à jour votre fichier .env :")
     print()
