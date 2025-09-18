@@ -29,47 +29,166 @@
                     Nous respectons votre vie privée. Vos données ne seront utilisées que pour cette réunion.
                 </div>
                 
-                <div class="form-check mb-4">
-                    <input class="form-check-input" type="checkbox" id="consent" required>
-                    <label class="form-check-label text-start" for="consent">
-                        J'accepte l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion. 
-                        Mes informations ne seront pas partagées avec des tiers.
-                    </label>
-                </div>
-                
-                <button type="button" class="btn btn-primary btn-lg px-5" onclick="showEmailForm()" disabled id="continueBtn">
-                    <i class="fas fa-arrow-right me-2"></i>
-                    Continuer
-                </button>
-                
-                <!-- Formulaire Email (caché initialement) -->
-                <div id="emailForm" style="display: none;" class="mt-4">
-                    <form method="post" action="{% url 'presence_form' reunion.qr_code_uuid %}">
-                        {% csrf_token %}
+                <!-- Formulaire unifié -->
+                <form method="post" action="{% url 'presence_form' reunion.qr_code_uuid %}" id="presenceForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
+                        <label class="form-check-label text-start" for="consent">
+                            J'accepte l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion. 
+                            Mes informations ne seront pas partagées avec des tiers.
+                        </label>
+                    </div>
+                    
+                    <!-- Formulaire Email (caché initialement) -->
+                    <div id="emailForm" style="display: none;" class="mt-4">
                         <div class="mb-3">
                             <label for="email" class="form-label">Votre adresse email</label>
                             <input type="email" class="form-control form-control-lg" id="email" name="email" 
                                    placeholder="votre.email@example.com" required>
+                            <div class="form-text">
+                                Les emails @artci.ci sont confirmés automatiquement. 
+                                Les autres emails nécessiteront de remplir un formulaire complet.
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-success btn-lg px-5">
+                        
+                        <button type="submit" class="btn btn-success btn-lg px-4">
                             <i class="fas fa-paper-plane me-2"></i>
-                            Envoyer la Demande
+                            Confirmer ma Présence
                         </button>
-                    </form>
-                </div>
+                        
+                        <!-- Bouton pour revenir en arrière -->
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2" onclick="hideEmailForm()">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Retour
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('consent').addEventListener('change', function() {
-    document.getElementById('continueBtn').disabled = !this.checked;
+document.addEventListener('DOMContentLoaded', function() {
+    const consentCheckbox = document.getElementById('consent');
+    const emailForm = document.getElementById('emailForm');
+    const emailInput = document.getElementById('email');
+    
+    consentCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            // Afficher le formulaire d'email avec animation
+            emailForm.style.display = 'block';
+            emailForm.style.opacity = '0';
+            emailForm.style.transform = 'translateY(20px)';
+            
+            // Animation d'apparition
+            setTimeout(() => {
+                emailForm.style.transition = 'all 0.3s ease-in-out';
+                emailForm.style.opacity = '1';
+                emailForm.style.transform = 'translateY(0)';
+                
+                // Focus automatique sur le champ email
+                emailInput.focus();
+            }, 10);
+        } else {
+            // Cacher le formulaire
+            hideEmailForm();
+        }
+    });
 });
 
-function showEmailForm() {
-    document.getElementById('emailForm').style.display = 'block';
-    document.getElementById('continueBtn').style.display = 'none';
+function hideEmailForm() {
+    const emailForm = document.getElementById('emailForm');
+    const consentCheckbox = document.getElementById('consent');
+    
+    // Animation de disparition
+    emailForm.style.transition = 'all 0.3s ease-in-out';
+    emailForm.style.opacity = '0';
+    emailForm.style.transform = 'translateY(20px)';
+    
+    setTimeout(() => {
+        emailForm.style.display = 'none';
+        consentCheckbox.checked = false;
+    }, 300);
 }
+
+// Validation en temps réel de l'email
+document.getElementById('email').addEventListener('input', function() {
+    const emailValue = this.value;
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const formText = document.querySelector('.form-text');
+    
+    if (emailValue.endsWith('@artci.ci')) {
+        formText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Email ARTCI détecté - Confirmation automatique';
+        formText.className = 'form-text text-success';
+        submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirmer (ARTCI)';
+        submitBtn.className = 'btn btn-primary btn-lg px-4';
+    } else if (emailValue.includes('@') && emailValue.includes('.')) {
+        formText.innerHTML = '<i class="fas fa-info-circle text-info me-1"></i>Email externe - Formulaire complet requis';
+        formText.className = 'form-text text-info';
+        submitBtn.innerHTML = '<i class="fas fa-edit me-2"></i>Continuer avec le Formulaire';
+        submitBtn.className = 'btn btn-success btn-lg px-4';
+    } else {
+        formText.innerHTML = 'Les emails @artci.ci sont confirmés automatiquement. Les autres emails nécessiteront de remplir un formulaire complet.';
+        formText.className = 'form-text';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Confirmer ma Présence';
+        submitBtn.className = 'btn btn-success btn-lg px-4';
+    }
+});
+
+// Animation au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.querySelector('.card');
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(30px)';
+    
+    setTimeout(() => {
+        card.style.transition = 'all 0.5s ease-out';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+    }, 100);
+});
 </script>
+
+<style>
+/* Animations et styles personnalisés */
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#emailForm {
+    border-top: 1px solid #dee2e6;
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.bg-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+}
+
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+</style>
 {% endblock %}

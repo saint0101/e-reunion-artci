@@ -241,11 +241,13 @@ class PresenceForm(forms.Form):
         help_text="Les emails @artci.ci nécessitent une validation par email. Les autres emails sont confirmés directement."
     )
     
+    """
     consent = forms.BooleanField(
         label="J'accepte l'utilisation de mes données pour cette réunion",
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
+    """
     
     def clean_email(self):
         email = self.cleaned_data['email'].lower()

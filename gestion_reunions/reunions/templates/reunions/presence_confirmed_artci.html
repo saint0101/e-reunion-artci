@@ -1,34 +1,54 @@
 {% extends 'reunions/base.html' %}
-{% load static %}
 
-{% block title %}Présence confirmée - {{ reunion.titre }}{% endblock %}
+{% block title %}Présence Confirmée{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">✅ Présence confirmée</h4>
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body text-center p-5">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle fa-5x text-success mb-3"></i>
+                    <h2 class="h4 mb-3 text-success">Présence Confirmée !</h2>
                 </div>
-                <div class="card-body text-center">
-                    <!-- Informations réunion -->
-                    <div class="alert alert-info">
-                        <h5>📅 {{ reunion.titre }}</h5>
-                        <p class="mb-1"><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
-                        <p class="mb-0"><strong>Lieu :</strong> {{ reunion.lieu }}</p>
-                    </div>
-
-                    <div class="alert alert-success">
-                        <h5>🎯 Confirmation réussie</h5>
-                        <p><strong>Email :</strong> {{ presence_request.email }}</p>
-                        <p><strong>Nom :</strong> {{ presence_request.get_display_name }}</p>
-                        <p><strong>Organisation :</strong> {{ presence_request.organisation }}</p>
-                        <p><strong>Contact :</strong> {{ presence_request.contact }}</p>
-                        <p class="mb-0">Votre présence a été automatiquement confirmée.</p>
-                    </div>
-
-                    <!-- Info importante sur l'annulation -->
+                
+                <div class="bg-light rounded-3 p-4 mb-4">
+                    <h5 class="text-primary mb-2">{{ reunion.titre }}</h5>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ reunion.date_debut|date:"l d F Y à H:i" }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ reunion.lieu }}
+                    </p>
+                </div>
+                
+                {% if is_artci %}
+                <div class="alert alert-success border-0">
+                    <h6 class="mb-2">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Email ARTCI Confirmé
+                    </h6>
+                    <p class="mb-1"><strong>Email :</strong> {{ presence_request.email }}</p>
+                    <p class="mb-1"><strong>Nom :</strong> {{ presence_request.get_display_name }}</p>
+                    <p class="mb-0"><strong>Organisation :</strong> {{ presence_request.organisation }}</p>
+                </div>
+                {% else %}
+                <div class="alert alert-info border-0">
+                    <h6 class="mb-2">
+                        <i class="fas fa-user-check me-2"></i>
+                        Participant Externe Confirmé
+                    </h6>
+                    <p class="mb-1"><strong>Email :</strong> {{ presence_request.email }}</p>
+                    <p class="mb-1"><strong>Nom :</strong> {{ presence_request.nom }} {{ presence_request.prenom }}</p>
+                    <p class="mb-1"><strong>Organisation :</strong> {{ presence_request.organisation }}</p>
+                    <p class="mb-1"><strong>Fonction :</strong> {{ presence_request.fonction }}</p>
+                    <p class="mb-0"><strong>Contact :</strong> {{ presence_request.contact }}</p>
+                </div>
+                {% endif %}
+                
+                 <!-- Info importante sur l'annulation -->
                     <div class="alert alert-warning">
                         <h6>⚠️ Important</h6>
                         <p class="mb-0">
@@ -38,15 +58,44 @@
                             pour l'annuler via le lien dans l'email. --> 
                         </p>
                     </div>
-
-                    <div class="mt-4">
-                        <a href="{% url 'dashboard' %}" class="btn btn-primary">
-                            🏠 Retour à l'accueil
-                        </a>
-                    </div>
+                
+                <div class="d-grid">
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-home me-2"></i>
+                        Retour à l'Accueil
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Animation d'apparition
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.querySelector('.card');
+    const icon = document.querySelector('.fa-check-circle');
+    
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.9)';
+    
+    setTimeout(() => {
+        card.style.transition = 'all 0.5s ease-out';
+        card.style.opacity = '1';
+        card.style.transform = 'scale(1)';
+        
+        // Animation de l'icône
+        setTimeout(() => {
+            icon.style.animation = 'pulse 1s ease-in-out infinite alternate';
+        }, 500);
+    }, 100);
+});
+</script>
+
+<style>
+@keyframes pulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.05); }
+}
+</style>
 {% endblock %}
