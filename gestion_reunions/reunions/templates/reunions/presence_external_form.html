@@ -1,0 +1,100 @@
+{% extends 'reunions/base.html' %}
+{% load static %}
+
+{% block title %}Formulaire d'inscription - {{ reunion.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📝 Inscription à la réunion</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Informations réunion -->
+                    <div class="alert alert-info">
+                        <h5>📅 {{ reunion.titre }}</h5>
+                        <p class="mb-1"><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                        <p class="mb-1"><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                        <p class="mb-0"><strong>Email :</strong> {{ email }}</p>
+                    </div>
+
+                    <!-- Formulaire -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.nom.id_for_label }}" class="form-label">{{ form.nom.label }}</label>
+                                {{ form.nom }}
+                                {% if form.nom.errors %}
+                                    <div class="text-danger">{{ form.nom.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.prenom.id_for_label }}" class="form-label">{{ form.prenom.label }}</label>
+                                {{ form.prenom }}
+                                {% if form.prenom.errors %}
+                                    <div class="text-danger">{{ form.prenom.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.organisation.id_for_label }}" class="form-label">{{ form.organisation.label }}</label>
+                            {{ form.organisation }}
+                            {% if form.organisation.errors %}
+                                <div class="text-danger">{{ form.organisation.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.fonction.id_for_label }}" class="form-label">{{ form.fonction.label }}</label>
+                                {{ form.fonction }}
+                                {% if form.fonction.errors %}
+                                    <div class="text-danger">{{ form.fonction.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.contact.id_for_label }}" class="form-label">{{ form.contact.label }}</label>
+                                {{ form.contact }}
+                                {% if form.contact.errors %}
+                                    <div class="text-danger">{{ form.contact.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Info importante -->
+                        <div class="alert alert-warning">
+                            <h6>⚠️ Information importante</h6>
+                            <p class="mb-0">
+                                Après validation, un email de confirmation vous sera envoyé avec un lien d'annulation. 
+                                Si vous ne cliquez pas sur "Annuler" dans les <strong>5 minutes</strong>, 
+                                votre présence sera automatiquement confirmée.
+                            </p>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                ✅ Confirmer mon inscription
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

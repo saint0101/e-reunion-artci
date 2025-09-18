@@ -1,0 +1,102 @@
+{% extends 'reunions/base.html' %}
+{% load static %}
+
+{% block title %}Inscription en attente - {{ reunion.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">⏳ Inscription en attente de confirmation</h4>
+                </div>
+                <div class="card-body text-center">
+                    <!-- Informations réunion -->
+                    <div class="alert alert-info">
+                        <h5>📅 {{ reunion.titre }}</h5>
+                        <p class="mb-1"><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                        <p class="mb-0"><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                    </div>
+
+                    {% if is_artci %}
+                        <div class="alert alert-success">
+                            <h5>✅ Email ARTCI détecté</h5>
+                            <p>Votre inscription a été enregistrée avec l'email : <strong>{{ presence_request.email }}</strong></p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <h5>✅ Inscription enregistrée</h5>
+                            <p>Vos informations complètes ont été enregistrées.</p>
+                            <p><strong>Email :</strong> {{ presence_request.email }}</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Timer de confirmation automatique -->
+                    <div class="alert alert-warning">
+                        <h5>⏰ Confirmation automatique</h5>
+                        <p>Un email de confirmation avec lien d'annulation vous a été envoyé.</p>
+                        <p class="mb-1">
+                            <strong>Si vous ne cliquez pas sur "Annuler" dans les 5 minutes, 
+                            votre présence sera automatiquement confirmée.</strong>
+                        </p>
+                        <div id="countdown-timer" class="mt-3">
+                            <h4 class="text-primary">
+                                Confirmation automatique dans : <span id="timer">05:00</span>
+                            </h4>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6>📧 Vérifiez votre boîte email</h6>
+                        <p class="mb-0">
+                            Un email a été envoyé à <strong>{{ presence_request.email }}</strong> 
+                            avec un bouton d'annulation au cas où cette inscription ne serait pas de votre fait.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            🏠 Retour à l'accueil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Timer de compte à rebours
+document.addEventListener('DOMContentLoaded', function() {
+    const timerElement = document.getElementById('timer');
+    const confirmationTime = new Date('{{ presence_request.auto_confirm_at|date:"c" }}');
+    
+    function updateTimer() {
+        const now = new Date();
+        const timeLeft = confirmationTime - now;
+        
+        if (timeLeft <= 0) {
+            timerElement.textContent = '00:00';
+            document.getElementById('countdown-timer').innerHTML = 
+                '<h4 class="text-success">✅ Présence confirmée automatiquement !</h4>';
+            return;
+        }
+        
+        const minutes = Math.floor(timeLeft / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        
+        timerElement.textContent = 
+            String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    }
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    
+    // Arrêter le timer après 5 minutes
+    setTimeout(() => {
+        clearInterval(interval);
+    }, 5 * 60 * 1000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+# Site configuration
+SITE_NAME=Plateforme QR Meeting ARTCI
+TITLE_PREFIX=eReunion
+SITE_PORT=:8080
+SITE_PROTOCOL=http://
+# SITE_ADDRESS=196.216.227.105
+SITE_ADDRESS=localhost
+DEFAULT_LIST_SIZE=10
+SITE_URL=http://localhost 
+# SITE_URL=http://196.216.227.105
+
+
+
+# Django configuration
+DEBUG=False
+SECRET_KEY="django-insecure-p7iab7_*2-)#&h&j31r9npe@syg=of59k0^#)#1mlyga5)z)q^"
+ALLOWED_HOSTS=127.0.0.1,localhost,172.16.0.153,196.216.227.105,0.0.0.0
+
+# Database Configuration
+DB_NAME=gestion_reunions
+DB_USER=e_reunion_artci
+DB_PASSWORD=postgres_ereunion@20.25
+DB_HOST=db
+DB_PORT=5433
+
+# Email Configuration
+#EMAIL_HOST=smtp.gmail.com
+#EMAIL_PORT=587
+#EMAIL_HOST_USER=warrensaint1@gmail.com
+#EMAIL_HOST_PASSWORD=wcum uphk tocm cter
+#DEFAULT_FROM_EMAIL=warrensaint1@gmail.com
+#EMAIL_DEBUG=True
+#USE_REAL_EMAIL=True
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.office365.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False  # TRÈS IMPORTANT : False pour Office 365
+EMAIL_HOST_USER = 'qrmeeting@artci.ci'
+EMAIL_HOST_PASSWORD = 'Admin/QR25'  # Vérifiez que c'est exactement ça
+# DEFAULT_FROM_EMAIL = 'qrmeeting@artci.ci'
+DEFAULT_FROM_EMAIL = 'QR Meeting <qrmeeting@artci.ci>'
+EMAIL_TIMEOUT = 30
+
+
+
+# Protocole utilisé
+SECURE_SSL_REDIRECT=False
+
+# Redis Configuration
+REDIS_URL=redis://redis:6380/1
+
+# URL du site (dev ou prod)
+#SITE_URL=http://192.168.100.13:8000 172.20.10.2
+# SITE_URL=http://0.0.0.0:8000
+
+
+# Adresse email par défaut
+DEFAULT_FROM_EMAIL=adminpresence@artci.ci

@@ -324,6 +324,22 @@ CACHES = {
     }
 }
 
+
+# Configuration Celery pour les tâches périodiques
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'auto-confirm-presences': {
+        'task': 'reunions.tasks.auto_confirm_pending_presences',
+        'schedule': 60.0,  # Toutes les minutes
+    },
+    'cleanup-expired-requests': {
+        'task': 'reunions.tasks.cleanup_expired_requests',
+        'schedule': crontab(hour=2, minute=0),  # Tous les jours à 2h du matin
+    },
+}
+
+CELERY_TIMEZONE = 'UTC'
 # Session Configuration
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'

@@ -1,0 +1,42 @@
+{% extends 'reunions/base.html' %}
+{% load static %}
+
+{% block title %}Inscription annulée - {{ reunion.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">✅ Inscription annulée</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="alert alert-success">
+                        <h5>🚫 Annulation confirmée</h5>
+                        <p>Votre inscription à la réunion suivante a été annulée avec succès :</p>
+                    </div>
+
+                    <!-- Informations réunion -->
+                    <div class="alert alert-info">
+                        <h5>📅 {{ reunion.titre }}</h5>
+                        <p class="mb-1"><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                        <p class="mb-0"><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                    </div>
+
+                    <p class="text-muted">
+                        Si vous changez d'avis, vous devrez scanner à nouveau le QR code 
+                        pour vous réinscrire à cette réunion.
+                    </p>
+
+                    <div class="mt-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                            🏠 Retour à l'accueil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

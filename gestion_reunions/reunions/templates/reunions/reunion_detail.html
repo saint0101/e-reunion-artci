@@ -65,7 +65,7 @@
             </div>
         </div>
         
-        <!-- Liste des Présences -->
+        <!-- Liste des Présences MISE À JOUR -->
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
@@ -97,30 +97,108 @@
                     <table class="table table-hover mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th>Email</th>
-                                <th>Nom</th>
-                                <th>Prénom</th>
-                                <th>Organisation</th>
-                                <th>Confirmé le</th>
+                                <th width="5%">#</th>
+                                <th width="15%">Nom</th>
+                                <th width="15%">Prénom</th>
+                                <th width="20%">Structure</th>
+                                <th width="15%">Fonction</th>
+                                <th width="12%">Contact</th>
+                                <th width="18%">Email</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for presence in presences %}
                             <tr>
-                                <td>{{ presence.email }}</td>
-                                <td>{{ presence.nom|default:"—" }}</td>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ presence.nom|default:"—" }}</strong>
+                                    {% if presence.is_artci_email %}
+                                        <span class="badge bg-primary ms-1" title="Employé ARTCI">ARTCI</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary ms-1" title="Participant externe">EXT</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ presence.prenom|default:"—" }}</td>
-                                <td>{{ presence.organisation|default:"—" }}</td>
-                                <td>{{ presence.confirmed_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <span title="{{ presence.organisation }}">
+                                        {{ presence.organisation|default:"—"|truncatechars:25 }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span title="{{ presence.fonction }}">
+                                        {{ presence.fonction|default:"—"|truncatechars:20 }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if presence.contact %}
+                                        <a href="tel:{{ presence.contact }}" class="text-decoration-none">
+                                            <i class="fas fa-phone text-success me-1"></i>
+                                            {{ presence.contact }}
+                                        </a>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="mailto:{{ presence.email }}" class="text-decoration-none">
+                                        <i class="fas fa-envelope text-primary me-1"></i>
+                                        {{ presence.email|truncatechars:25 }}
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ presence.confirmed_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Résumé des participants -->
+                <div class="card-footer bg-light">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="border-end">
+                                <h6 class="text-primary mb-1">{{ presences.count }}</h6>
+                                <small class="text-muted">Total Participants</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border-end">
+                                <h6 class="text-primary mb-1">
+                                    {% with artci_count=presences|length %}
+                                        {% for p in presences %}
+                                            {% if p.is_artci_email %}
+                                                {{ forloop.counter0|add:1 }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                </h6>
+                                <small class="text-muted">Employés ARTCI</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-secondary mb-1">
+                                {% with external_count=0 %}
+                                    {% for p in presences %}
+                                        {% if not p.is_artci_email %}
+                                            {{ forloop.counter0|add:1 }}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endwith %}
+                            </h6>
+                            <small class="text-muted">Participants Externes</small>
+                        </div>
+                    </div>
+                </div>
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">Aucun participant confirmé</p>
+                <div class="text-center py-5">
+                    <i class="fas fa-user-slash fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun participant confirmé</h5>
+                    <p class="text-muted">
+                        Les participants pourront scanner le QR code pour s'inscrire à cette réunion.
+                    </p>
                 </div>
                 {% endif %}
             </div>
@@ -213,7 +291,7 @@
                 <div class="mt-3">
                     <small class="text-muted">
                         Lien direct: <br>
-                        <code>{{ request.build_absolute_uri }}/presence/{{ reunion.qr_code_uuid }}/</code>
+                        <code>{{ request.build_absolute_uri }}presence/{{ reunion.qr_code_uuid }}/</code>
                     </small>
                 </div>
             </div>

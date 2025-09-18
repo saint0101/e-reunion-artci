@@ -1,0 +1,135 @@
+<!-- reunions/templates/reunions/email_cancellation.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation d'inscription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .reunion-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .cancel-button {
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            display: inline-block;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .cancel-button:hover {
+            background-color: #c82333;
+            color: white;
+            text-decoration: none;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .success-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Inscription confirmée</h1>
+        <p>Réunion: {{ reunion.titre }}</p>
+    </div>
+    
+    <div class="content">
+        <p>Bonjour{% if presence_request.prenom %} {{ presence_request.prenom }}{% endif %},</p>
+        
+        <p>Votre inscription à la réunion ci-dessous a bien été enregistrée :</p>
+        
+        <div class="reunion-details">
+            <h3>📅 {{ reunion.titre }}</h3>
+            <p><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+            <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+            {% if reunion.description %}
+                <p><strong>Description :</strong> {{ reunion.description|truncatewords:20 }}</p>
+            {% endif %}
+        </div>
+        
+        {% if is_artci %}
+            <div class="success-info">
+                <strong>✅ Email ARTCI détecté</strong><br>
+                Votre présence sera automatiquement confirmée si vous ne l'annulez pas.
+            </div>
+        {% else %}
+            <div class="success-info">
+                <strong>✅ Inscription enregistrée</strong><br>
+                Vos informations complètes ont été enregistrées.
+            </div>
+        {% endif %}
+        
+        <div class="warning-box">
+            <strong>⚠️ IMPORTANT - Délai d'annulation</strong><br>
+            Si cette inscription <strong>n'est pas de votre fait</strong>, vous avez <strong>5 minutes</strong> 
+            pour l'annuler en cliquant sur le bouton ci-dessous.
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ cancellation_url }}" class="cancel-button">
+                🚫 ANNULER MON INSCRIPTION
+            </a>
+        </div>
+        
+        <div style="background-color: white; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+            <strong>✅ Si vous souhaitez bien participer</strong><br>
+            Vous n'avez rien à faire ! Votre présence sera automatiquement confirmée 
+            à <strong>{{ auto_confirm_time|date:"H:i" }}</strong> si vous n'annulez pas.
+        </div>
+        
+        <p>Confirmation automatique prévue le {{ auto_confirm_time|date:"d/m/Y à H:i" }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>Cet email a été envoyé automatiquement par QR Meeting.</p>
+        <p>Si le lien ne fonctionne pas, copiez-collez cette URL dans votre navigateur :</p>
+        <p style="word-break: break-all;">{{ cancellation_url }}</p>
+    </div>
+</body>
+</html>

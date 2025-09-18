@@ -1,0 +1,51 @@
+{% extends 'reunions/base.html' %}
+{% load static %}
+
+{% block title %}Présence confirmée - {{ reunion.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">✅ Présence confirmée (Email ARTCI)</h4>
+                </div>
+                <div class="card-body text-center">
+                    <!-- Informations réunion -->
+                    <div class="alert alert-info">
+                        <h5>📅 {{ reunion.titre }}</h5>
+                        <p class="mb-1"><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                        <p class="mb-0"><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                    </div>
+
+                    <div class="alert alert-success">
+                        <h5>🎯 Confirmation réussie</h5>
+                        <p><strong>Email :</strong> {{ presence_request.email }}</p>
+                        <p><strong>Nom :</strong> {{ presence_request.get_display_name }}</p>
+                        <p><strong>Organisation :</strong> {{ presence_request.organisation }}</p>
+                        <p><strong>Contact :</strong> {{ presence_request.contact }}</p>
+                        <p class="mb-0">Votre présence a été automatiquement confirmée.</p>
+                    </div>
+
+                    <!-- Info importante sur l'annulation -->
+                    <div class="alert alert-warning">
+                        <h6>⚠️ Important</h6>
+                        <p class="mb-0">
+                            Un email d'annulation vous a été envoyé. Si cette inscription 
+                            <strong>n'est pas de votre fait</strong>, vous avez 5 minutes 
+                            pour l'annuler via le lien dans l'email.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                            🏠 Retour à l'accueil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'reunions/base.html' %}
+{% load static %}
+
+{% block title %}Annuler l'inscription - {{ presence_request.reunion.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">🚫 Annuler l'inscription</h4>
+                </div>
+                <div class="card-body text-center">
+                    <!-- Informations réunion -->
+                    <div class="alert alert-info">
+                        <h5>📅 {{ presence_request.reunion.titre }}</h5>
+                        <p class="mb-1"><strong>Date :</strong> {{ presence_request.reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                        <p class="mb-1"><strong>Lieu :</strong> {{ presence_request.reunion.lieu }}</p>
+                        <p class="mb-0"><strong>Email :</strong> {{ presence_request.email }}</p>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h5>⚠️ Confirmer l'annulation</h5>
+                        <p>Êtes-vous sûr de vouloir annuler votre inscription à cette réunion ?</p>
+                        <p class="mb-0"><strong>Cette action est irréversible.</strong></p>
+                    </div>
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="cancel" class="btn btn-danger btn-lg">
+                                🚫 Oui, annuler mon inscription
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                                ↩️ Non, garder mon inscription
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

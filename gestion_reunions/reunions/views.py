@@ -10,11 +10,12 @@ from django.db.models import Count, Q
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
-from .forms import ReunionForm, PresenceForm, CompteRenduForm
+from .forms import ReunionForm, PresenceForm, CompteRenduForm, PresenceDirectForm, PresenceForm, PresenceValidationForm
 from .utils import generate_presence_report, send_compte_rendu_email
 import json
 from email.utils import formataddr
-
+from datetime import timedelta
+import uuid
 
 
 
@@ -159,49 +160,10 @@ def presence_qr_redirect(request, uuid):
         messages.error(request, "QR Code invalide ou réunion introuvable.")
         return redirect('dashboard')
 
+
 def is_artci_email(email):
     """Vérifie si l'email appartient au domaine ARTCI"""
     return email.lower().endswith('@artci.ci')
-
-def presence_form(request, uuid):
-    """Formulaire de demande de présence après consentement - Version améliorée"""
-    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
-    
-    if request.method == 'POST':
-        form = PresenceForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            
-            # Vérifier si déjà enregistré
-            existing_request = PresenceRequest.objects.filter(
-                reunion=reunion, email=email
-            ).first()
-            
-            if existing_request:
-                messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
-                return redirect('presence_status', token=existing_request.validation_token)
-            
-            # Créer nouvelle demande
-            presence_request = PresenceRequest.objects.create(
-                reunion=reunion,
-                email=email,
-                consent_given=True
-            )
-            
-            # Traitement différencié selon le domaine email
-            if is_artci_email(email):
-                # Email ARTCI : Validation directe sans formulaire
-                return handle_artci_email_validation(request, presence_request)
-            else:
-                # Autre email : Processus complet avec validation par email
-                return handle_external_email_validation(request, presence_request)
-    else:
-        form = PresenceForm()
-    
-    return render(request, 'reunions/presence_form.html', {
-        'form': form,
-        'reunion': reunion
-    })
 
 def handle_artci_email_validation(request, presence_request):
     """Gestion spéciale pour les emails @artci.ci - Validation directe"""
@@ -618,7 +580,6 @@ def build_validation_url_ext(token):
     return f"{base_url}/validation/{token}/"
 """
 
-
 def build_validation_url_ext(token):
     """
     Construit l'URL complète de validation pour les QR codes
@@ -632,8 +593,10 @@ def build_validation_url_ext(token):
         base_url = settings.SITE_URL.rstrip('/')
     else:
         # Sinon, on force l'IP publique et le port désiré
-        public_ip = '196.216.227.105'
-        port = '80'  # ou '80' si tu passes Gunicorn sur le port 80
+        # public_ip = '196.216.227.105'
+                
+        public_ip = 'localhost'  # Pour les tests locaux, sinon utiliser l'IP publique
+        port = '8080'  # ou '80' si tu passes Gunicorn sur le port 80
         base_url = f"{protocol}://{public_ip}:{port}"
 
     return f"{base_url}/validation/{token}/"
@@ -859,10 +822,9 @@ def debug_email_config(request):
     }, json_dumps_params={'indent': 2})
 
 
-
-
 # Modifiez temporairement votre fonction send_artci_validation_email pour plus de debug
 def send_artci_validation_email_debug(presence_request):
+
     """Version debug de l'envoi d'email"""
     
     print("=== DEBUG EMAIL CONFIGURATION ===")
@@ -959,3 +921,304 @@ Ce message est automatique. Merci de ne pas y répondre.
         print(f"   Destinataire : {presence_request.email}")
         print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
         return False
+    
+
+def presence_form(request, uuid):
+    """Formulaire de demande de présence après consentement"""
+    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
+    
+    if request.method == 'POST':
+        form = PresenceForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            
+            # Vérifier si déjà enregistré
+            existing_request = PresenceRequest.objects.filter(
+                reunion=reunion, email=email
+            ).first()
+            
+            if existing_request:
+                messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
+                return redirect('presence_status', token=existing_request.validation_token)
+            
+            # Traitement différencié selon le domaine email
+            if is_artci_email(email):
+                # Email ARTCI : Confirmation directe avec validation par email
+                presence_request = PresenceRequest.objects.create(
+                    reunion=reunion,
+                    email=email,
+                    consent_given=True,
+                    status='confirmed',  # CONFIRME DIRECTEMENT
+                    confirmed_at=timezone.now()
+                )
+                
+                # Auto-remplir les infos ARTCI
+                def format_nom(nom):
+                    nom = nom.replace("'", "' ")
+                    return '-'.join(part.capitalize() for part in nom.split('-')).replace("' ", "'")
+
+                email_prefix = email.split('@')[0]
+                if '.' in email_prefix:
+                    parts = email_prefix.split('.')
+                    presence_request.prenom = format_nom(parts[1]) if len(parts) > 1 else ''
+                    presence_request.nom = format_nom(parts[0])
+                else:
+                    presence_request.prenom = format_nom(email_prefix)
+                    presence_request.nom = ''
+                presence_request.organisation = 'ARTCI'
+                presence_request.save()
+                
+                # Envoyer email d'annulation avec délai de 5 minutes
+                send_cancellation_email(presence_request)
+                
+                messages.success(request, 
+                    "Email ARTCI détecté ! Votre présence a été confirmée. "
+                    "Un email d'annulation vous a été envoyé au cas où cette inscription ne serait pas de votre fait.")
+                
+                return render(request, 'reunions/presence_confirmed_artci.html', {
+                    'reunion': reunion,
+                    'presence_request': presence_request,
+                    'is_artci': True
+                })
+            else:
+                # Email externe : redirection vers formulaire complet
+                # Créer une session temporaire pour stocker l'email
+                request.session['temp_email'] = email
+                request.session['reunion_uuid'] = str(uuid)
+                return redirect('presence_external_form', uuid=uuid)
+    else:
+        form = PresenceForm()
+    
+    return render(request, 'reunions/presence_form.html', {
+        'form': form,
+        'reunion': reunion
+    })
+
+def presence_external_form(request, uuid):
+    """Formulaire complet pour les utilisateurs externes"""
+    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
+    
+    # Récupérer l'email depuis la session
+    temp_email = request.session.get('temp_email')
+    if not temp_email or request.session.get('reunion_uuid') != str(uuid):
+        messages.error(request, "Session expirée. Veuillez recommencer.")
+        return redirect('presence_qr_redirect', uuid=uuid)
+    
+    # Vérifier que l'email n'est pas ARTCI
+    if temp_email.endswith('@artci.ci'):
+        messages.error(request, "Les emails ARTCI doivent passer par la validation directe.")
+        return redirect('presence_qr_redirect', uuid=uuid)
+    
+    if request.method == 'POST':
+        form = PresenceDirectForm(request.POST)
+        if form.is_valid():
+            # Vérifier si déjà enregistré
+            existing_request = PresenceRequest.objects.filter(
+                reunion=reunion, email=temp_email
+            ).first()
+            
+            if existing_request:
+                messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
+                return redirect('presence_status', token=existing_request.validation_token)
+            
+            # Créer la demande avec CONFIRMATION DIRECTE
+            presence_request = PresenceRequest.objects.create(
+                reunion=reunion,
+                email=temp_email,
+                nom=form.cleaned_data['nom'],
+                prenom=form.cleaned_data['prenom'],
+                organisation=form.cleaned_data['organisation'],
+                fonction=form.cleaned_data['fonction'],
+                contact=form.cleaned_data['contact'],
+                consent_given=True,
+                status='confirmed',  # CONFIRME DIRECTEMENT
+                confirmed_at=timezone.now()
+            )
+            
+            # Envoyer email d'annulation avec délai de 5 minutes
+            send_cancellation_email(presence_request)
+            
+            # Nettoyer la session
+            if 'temp_email' in request.session:
+                del request.session['temp_email']
+            if 'reunion_uuid' in request.session:
+                del request.session['reunion_uuid']
+            
+            messages.success(request, 
+                "Votre présence a été confirmée ! Un email d'annulation vous a été envoyé "
+                "au cas où cette inscription ne serait pas de votre fait.")
+            
+            return render(request, 'reunions/presence_confirmed_external.html', {
+                'reunion': reunion,
+                'presence_request': presence_request,
+                'is_artci': False
+            })
+    else:
+        # Pré-remplir l'email et le rendre en lecture seule
+        form = PresenceDirectForm(initial={'email': temp_email})
+        form.fields['email'].widget.attrs['readonly'] = True
+        form.fields['email'].widget.attrs['style'] = 'background-color: #f8f9fa;'
+    
+    return render(request, 'reunions/presence_external_form.html', {
+        'form': form,
+        'reunion': reunion,
+        'email': temp_email
+    })
+
+
+def handle_artci_email_process(request, reunion, email):
+    """Gestion pour les emails ARTCI - Processus avec email"""
+    
+    # Créer la demande de présence
+    presence_request = PresenceRequest.objects.create(
+        reunion=reunion,
+        email=email,
+        consent_given=True,
+        status='pending',
+        auto_confirm_at=timezone.now() + timedelta(minutes=5)  # Confirmation auto dans 5 min
+    )
+    
+    # Envoyer email d'annulation
+    success = send_cancellation_email(presence_request)
+    
+    if success:
+        messages.success(request, 
+            "Email ARTCI détecté ! Votre inscription est enregistrée. "
+            "Un email d'annulation vous a été envoyé. Si vous ne cliquez pas sur 'Annuler' "
+            "dans les 5 minutes, votre présence sera automatiquement confirmée.")
+    else:
+        messages.error(request, 
+            "Erreur lors de l'envoi de l'email d'annulation.")
+    
+    return render(request, 'reunions/presence_pending_confirmation.html', {
+        'reunion': reunion,
+        'presence_request': presence_request,
+        'is_artci': True
+    })
+
+def presence_cancel(request, token):
+    """Vue pour annuler une demande de présence"""
+    presence_request = get_object_or_404(PresenceRequest, cancellation_token=token)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'cancel':
+            presence_request.status = 'cancelled'
+            presence_request.save()
+            messages.success(request, "Votre demande de présence a été annulée avec succès.")
+            return render(request, 'reunions/presence_cancelled.html', {
+                'reunion': presence_request.reunion
+            })
+    
+    # Vérifier si la demande est encore confirmée
+    if presence_request.status != 'confirmed':
+        return render(request, 'reunions/presence_cancel_expired.html', {
+            'presence_request': presence_request
+        })
+    
+    return render(request, 'reunions/presence_cancel_confirm.html', {
+        'presence_request': presence_request
+    })
+
+def send_cancellation_email(presence_request):
+    """Envoie l'email d'annulation avec bouton"""
+    
+    subject = f"Confirmation d'inscription - {presence_request.reunion.titre}"
+    cancellation_url = build_cancellation_url(presence_request.cancellation_token)
+    
+    print(f"🔗 URL d'annulation générée: {cancellation_url}")
+    
+    # Contexte du template
+    context = {
+        'presence_request': presence_request,
+        'cancellation_url': cancellation_url,
+        'reunion': presence_request.reunion,
+        'is_artci': presence_request.is_artci_email(),
+    }
+    
+    # Essayer de rendre le contenu HTML
+    try:
+        html_content = render_to_string('reunions/email_cancellation.html', context)
+    except Exception as e:
+        print(f"⚠️ Erreur lors du rendu du template HTML : {e}")
+        html_content = None
+    
+    # Contenu texte brut
+    text_content = f"""
+Bonjour,
+
+Votre inscription à la réunion « {presence_request.reunion.titre} » a bien été confirmée.
+
+📅 Date : {presence_request.reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
+📍 Lieu : {presence_request.reunion.lieu}
+
+⚠️ IMPORTANT : Si cette inscription n'est pas de votre fait, vous avez 5 minutes pour l'annuler en cliquant sur le lien ci-dessous :
+
+{cancellation_url}
+
+Si vous souhaitez bien participer à cette réunion, vous n'avez rien à faire.
+
+Merci,
+L'équipe QR Meeting
+
+---
+Ce message est automatique. Merci de ne pas y répondre.
+"""
+    
+    # Envoi de l'email
+    try:
+        print(f"📧 Envoi de l'email d'annulation à : {presence_request.email}")
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[presence_request.email]
+        )
+        
+        if html_content:
+            email.attach_alternative(html_content, "text/html")
+        
+        result = email.send()
+        print(f"✅ Email d'annulation envoyé avec succès à {presence_request.email} (résultat : {result})")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de l'envoi de l'email d'annulation : {e}")
+        return False
+
+def build_cancellation_url(token):
+    """Construit l'URL d'annulation"""
+    protocol = 'https' if getattr(settings, 'SECURE_SSL_REDIRECT', False) else 'http'
+    
+    site_url = getattr(settings, 'SITE_URL', '').rstrip('/')
+    if site_url:
+        base_url = site_url
+    else:
+        # Pour les tests locaux
+        base_url = f"{protocol}://localhost:8000"
+    
+    return f"{base_url}/cancel/{token}/"
+
+# Tâche périodique pour la confirmation automatique (à ajouter à une tâche cron ou celery)
+def auto_confirm_pending_requests():
+
+    """Confirme automatiquement les demandes en attente après 5 minutes"""
+    from django.utils import timezone
+    
+    pending_requests = PresenceRequest.objects.filter(
+        status='pending',
+        auto_confirm_at__lte=timezone.now()
+    )
+    
+    confirmed_count = 0
+    for request in pending_requests:
+        if request.auto_confirm():
+            confirmed_count += 1
+            print(f"✅ Confirmation automatique: {request.email} pour {request.reunion.titre}")
+    
+    if confirmed_count > 0:
+        print(f"🎯 {confirmed_count} demandes confirmées automatiquement")
+    
+    return confirmed_count
+

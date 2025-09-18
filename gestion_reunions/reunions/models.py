@@ -83,8 +83,8 @@ class Reunion(models.Model):
         """Génère le QR code pour cette réunion"""
         try:
             from django.conf import settings
-            
-            # ✅ CORRECTION: Utiliser l'IP publique configurée
+        
+             # ✅ CORRECTION: Utiliser l'IP publique configurée
             site_protocol = getattr(settings, 'SITE_PROTOCOL', 'http://')
             site_address = getattr(settings, 'SITE_ADDRESS', '196.216.227.105')
             site_port = getattr(settings, 'SITE_PORT', '')
@@ -216,82 +216,8 @@ class Reunion(models.Model):
         else:
             return f"{int(minutes)}min"
 
-class PresenceRequest(models.Model):
-    STATUS_CHOICES = (
-        ('pending', 'En attente'),
-        ('confirmed', 'Confirmée'),
-        ('cancelled', 'Annulée'),
-    )
-    
-    reunion = models.ForeignKey(Reunion, on_delete=models.CASCADE, related_name='presence_requests')
-    email = models.EmailField()
-    nom = models.CharField(max_length=100, blank=True)
-    prenom = models.CharField(max_length=100, blank=True)
-    organisation = models.CharField(max_length=200, blank=True)
-    validation_token = models.UUIDField(default=uuid.uuid4, unique=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    consent_given = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    confirmed_at = models.DateTimeField(null=True, blank=True)
-    
-    class Meta:
-        unique_together = ('reunion', 'email')
-        verbose_name = 'Demande de présence'
-        verbose_name_plural = 'Demandes de présence'
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.email} - {self.reunion.titre} ({self.get_status_display()})"
-    
-    def get_full_name(self):
-        """Retourne le nom complet si disponible"""
-        if self.prenom and self.nom:
-            return f"{self.prenom} {self.nom}"
-        elif self.prenom:
-            return self.prenom
-        elif self.nom:
-            return self.nom
-        else:
-            return self.email
-    
-    def is_artci_email(self):
-        """Vérifie si c'est un email ARTCI"""
-        return self.email.lower().endswith('@artci.ci')
-    
-    def get_validation_type(self):
-        """Retourne le type de validation (ARTCI ou Externe)"""
-        return "ARTCI" if self.is_artci_email() else "Externe"
-    
-    def get_display_name(self):
-        """Retourne le nom d'affichage adapté selon le type"""
-        if self.is_artci_email() and not (self.nom or self.prenom):
-            # Pour ARTCI sans nom, extraire depuis l'email
-            email_prefix = self.email.split('@')[0]
-            if '.' in email_prefix:
-                parts = email_prefix.split('.')
-                return f"{parts[0].capitalize()} {parts[1].capitalize() if len(parts) > 1 else ''}"
-            else:
-                return email_prefix.capitalize()
-        elif self.prenom and self.nom:
-            return f"{self.prenom} {self.nom}"
-        elif self.prenom:
-            return self.prenom
-        elif self.nom:
-            return self.nom
-        else:
-            return self.email
-    
-    def __str__(self):
-        validation_type = "ARTCI" if self.is_artci_email() else "EXT"
-        return f"[{validation_type}] {self.email} - {self.reunion.titre} ({self.get_status_display()})"
-    
-    def is_expired(self):
-        """Vérifie si la demande a expiré (réunion passée et pas confirmée)"""
-        if self.status == 'confirmed':
-            return False
-        return self.reunion.is_past()
-
 class CompteRendu(models.Model):
+
     reunion = models.ForeignKey(Reunion, on_delete=models.CASCADE, related_name='comptes_rendus')
     titre = models.CharField(max_length=200)
     fichier = models.FileField(upload_to='comptes_rendus/')
@@ -395,3 +321,72 @@ class CompteRendu(models.Model):
         
         # Appeler la suppression par défaut
         super().delete(*args, **kwargs)
+
+class PresenceRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'En attente'),
+        ('confirmed', 'Confirmée'),
+        ('cancelled', 'Annulée'),
+        ('auto_cancelled', 'Annulée automatiquement'),  # NOUVEAU
+    )
+    
+    reunion = models.ForeignKey(Reunion, on_delete=models.CASCADE, related_name='presence_requests')
+    email = models.EmailField()
+    nom = models.CharField(max_length=100, blank=True)
+    prenom = models.CharField(max_length=100, blank=True)
+    organisation = models.CharField(max_length=200, blank=True)
+    fonction = models.CharField(max_length=200, blank=True)  # NOUVEAU
+    contact = models.CharField(max_length=20, blank=True)   # NOUVEAU
+    validation_token = models.UUIDField(default=uuid.uuid4, unique=True)
+    cancellation_token = models.UUIDField(default=uuid.uuid4, unique=True)  # NOUVEAU
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    consent_given = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    auto_confirm_at = models.DateTimeField(null=True, blank=True)  # NOUVEAU: Heure de confirmation automatique
+    
+    class Meta:
+        unique_together = ('reunion', 'email')
+        verbose_name = 'Demande de présence'
+        verbose_name_plural = 'Demandes de présence'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        validation_type = "ARTCI" if self.is_artci_email() else "EXT"
+        return f"[{validation_type}] {self.email} - {self.reunion.titre} ({self.get_status_display()})"
+    
+    def get_full_name(self):
+        """Retourne le nom complet si disponible"""
+        if self.prenom and self.nom:
+            return f"{self.prenom} {self.nom}"
+        elif self.prenom:
+            return self.prenom
+        elif self.nom:
+            return self.nom
+        else:
+            return self.email
+    
+    def is_artci_email(self):
+        """Vérifie si c'est un email ARTCI"""
+        return self.email.lower().endswith('@artci.ci')
+    
+    def get_cancellation_url(self):
+        """Retourne l'URL d'annulation"""
+        from django.urls import reverse
+        return reverse('presence_cancel', args=[str(self.cancellation_token)])
+    
+    def should_auto_confirm(self):
+        """Vérifie si la demande doit être confirmée automatiquement (5 min écoulées)"""
+        if self.status != 'pending' or not self.auto_confirm_at:
+            return False
+        from django.utils import timezone
+        return timezone.now() >= self.auto_confirm_at
+    
+    def auto_confirm(self):
+        """Confirmation automatique après 5 minutes"""
+        if self.should_auto_confirm():
+            self.status = 'confirmed'
+            self.confirmed_at = timezone.now()
+            self.save()
+            return True
+        return False

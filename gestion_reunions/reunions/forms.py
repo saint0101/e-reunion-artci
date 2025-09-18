@@ -81,102 +81,7 @@ class ReunionForm(forms.ModelForm):
                 raise ValidationError("La date de début ne peut pas être dans le passé.")
         
         return cleaned_data
-
-class PresenceDirectForm(forms.Form):
-    """Formulaire pour confirmation directe (non-ARTCI)"""
-    email = forms.EmailField(
-        label="Adresse email",
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'readonly': True,
-            'style': 'background-color: #f8f9fa;'
-        })
-    )
     
-    nom = forms.CharField(
-        max_length=100,
-        required=True,
-        label="Nom *",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Votre nom de famille'
-        })
-    )
-    
-    prenom = forms.CharField(
-        max_length=100,
-        required=True,
-        label="Prénom *",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Votre prénom'
-        })
-    )
-    
-    organisation = forms.CharField(
-        max_length=200,
-        required=True,
-        label="Organisation *",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Votre entreprise/organisation'
-        })
-    )
-    
-    def clean_email(self):
-        email = self.cleaned_data['email'].lower()
-        if email.endswith('@artci.ci'):
-            raise ValidationError("Les emails ARTCI doivent passer par la validation email.")
-        return email
-
-class PresenceForm(forms.Form):
-    email = forms.EmailField(
-        label="Adresse email",
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'votre.email@example.com',
-            'required': True
-        }),
-        help_text="Les emails @artci.ci nécessitent une validation par email. Les autres emails sont confirmés directement."
-    )
-    
-    consent = forms.BooleanField(
-        label="J'accepte l'utilisation de mes données pour cette réunion",
-        required=True,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
-    
-    def clean_email(self):
-        email = self.cleaned_data['email'].lower()
-        return email
-    
-
-class PresenceValidationForm(forms.Form):
-    nom = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Votre nom'
-        })
-    )
-    prenom = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Votre prénom'
-        })
-    )
-    organisation = forms.CharField(
-        max_length=200,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Votre organisation'
-        })
-    )
-
 class CompteRenduForm(forms.ModelForm):
     envoyer_automatiquement = forms.BooleanField(
         required=False,
@@ -214,6 +119,7 @@ class CompteRenduForm(forms.ModelForm):
         return fichier
 
 class SearchForm(forms.Form):
+
     query = forms.CharField(
         max_length=200,
         required=False,
@@ -246,4 +152,144 @@ class SearchForm(forms.Form):
         required=False,
         choices=[('', 'Tous les statuts')] + list(Reunion.STATUS_CHOICES),
         widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class PresenceDirectForm(forms.Form):
+    """Formulaire pour confirmation directe (non-ARTCI) - ORDRE REQUIS"""
+    
+    nom = forms.CharField(
+        max_length=100,
+        required=True,
+        label="Nom *",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre nom de famille'
+        })
+    )
+    
+    prenom = forms.CharField(
+        max_length=100,
+        required=True,
+        label="Prénom *",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre prénom'
+        })
+    )
+    
+    organisation = forms.CharField(
+        max_length=200,
+        required=True,
+        label="Structure/Organisation *",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre entreprise/organisation'
+        })
+    )
+    
+    fonction = forms.CharField(
+        max_length=200,
+        required=True,
+        label="Fonction *",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre poste/fonction'
+        })
+    )
+    
+    contact = forms.CharField(
+        max_length=20,
+        required=True,
+        label="Contact/Téléphone *",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre numéro de téléphone'
+        })
+    )
+    
+    email = forms.EmailField(
+        label="Adresse email *",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'votre.email@example.com'
+        })
+    )
+    
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        if email.endswith('@artci.ci'):
+            raise ValidationError("Les emails ARTCI doivent passer par la validation email.")
+        return email
+    
+    def clean_contact(self):
+        contact = self.cleaned_data['contact']
+        # Validation basique du numéro de téléphone
+        import re
+        if not re.match(r'^[\d\s\-\+\(\)\.]+$', contact):
+            raise ValidationError("Format de numéro de téléphone invalide.")
+        return contact
+
+class PresenceForm(forms.Form):
+    """Formulaire initial pour saisir l'email"""
+    email = forms.EmailField(
+        label="Adresse email",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'votre.email@example.com',
+            'required': True
+        }),
+        help_text="Les emails @artci.ci nécessitent une validation par email. Les autres emails sont confirmés directement."
+    )
+    
+    consent = forms.BooleanField(
+        label="J'accepte l'utilisation de mes données pour cette réunion",
+        required=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        return email
+
+class PresenceValidationForm(forms.Form):
+    """Formulaire de validation pour emails ARTCI (optionnel)"""
+    nom = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre nom (optionnel)'
+        })
+    )
+    prenom = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre prénom (optionnel)'
+        })
+    )
+    organisation = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre service/direction (optionnel)'
+        })
+    )
+    fonction = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre fonction (optionnel)'
+        })
+    )
+    contact = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Votre téléphone (optionnel)'
+        })
     )
