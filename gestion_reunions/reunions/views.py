@@ -971,9 +971,9 @@ def presence_form(request, uuid):
                 # Envoyer email d'annulation avec délai de 5 minutes
                 send_cancellation_email(presence_request)
                 
-                messages.success(request, 
-                    "Email ARTCI détecté ! Votre présence a été confirmée. "
-                    "Un email d'annulation vous a été envoyé au cas où cette inscription ne serait pas de votre fait.")
+                # messages.success(request, 
+                #    "Email ARTCI détecté ! Votre présence a été confirmée. "
+                #    "Un email d'annulation vous a été envoyé au cas où cette inscription ne serait pas de votre fait.")
                 
                 return render(request, 'reunions/presence_confirmed_artci.html', {
                     'reunion': reunion,
@@ -1044,9 +1044,9 @@ def presence_external_form(request, uuid):
             if 'reunion_uuid' in request.session:
                 del request.session['reunion_uuid']
             
-            messages.success(request, 
-                "Votre présence a été confirmée ! Un email d'annulation vous a été envoyé "
-                "au cas où cette inscription ne serait pas de votre fait.")
+            #messages.success(request, 
+            #    "Votre présence a été confirmée ! Un email d'annulation vous a été envoyé "
+            #    "au cas où cette inscription ne serait pas de votre fait.")
             
             return render(request, 'reunions/presence_confirmed_external.html', {
                 'reunion': reunion,
