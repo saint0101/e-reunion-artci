@@ -1,58 +1,133 @@
+<!-- templates/reunions/presence_cancel_confirm.html -->
 {% extends 'reunions/base.html' %}
+{% load static %}
 
-{% block title %}Présence annulée{% endblock %}
+{% block title %}Confirmer l'annulation - {{ presence_request.reunion.titre }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card shadow-lg border-0">
-                <div class="card-header bg-success text-white text-center py-4">
-                    <i class="fas fa-check-circle fa-4x mb-3"></i>
-                    <h3 class="mb-0">Annulation confirmée</h3>
-                    <p class="mb-0 mt-2 opacity-75">Votre demande a été traitée</p>
+                <div class="card-header bg-gradient-danger text-white text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h3 class="mb-0">Confirmation d'annulation</h3>
+                    <p class="mb-0 mt-2 opacity-75">Vérification de sécurité</p>
                 </div>
                 
-                <div class="card-body text-center p-4">
-                    <div class="alert alert-success border-0 mb-4">
-                        <h5 class="alert-heading">Annulation réussie</h5>
-                        <p class="mb-0">
-                            Votre présence a été annulée avec succès pour la réunion 
-                            <strong>"{{ reunion.titre }}"</strong>.
-                        </p>
-                    </div>
-
-                    <div class="bg-light rounded p-4 mb-4">
-                        <h6 class="text-muted mb-3">Résumé de l'annulation</h6>
-                        <p><strong>Réunion :</strong> {{ reunion.titre }}</p>
-                        <p><strong>Date :</strong> {{ reunion.date_debut|date:"l d F Y à H:i" }}</p>
-                        <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
-                        {% if participant_name %}
-                        <p><strong>Participant :</strong> {{ participant_name }}</p>
-                        {% endif %}
-                        <p><strong>Annulé le :</strong> {{ "now"|date:"d/m/Y à H:i" }}</p>
-                    </div>
-
+                <div class="card-body p-4">
+                    <!-- Informations participant -->
                     <div class="alert alert-info border-0 mb-4">
-                        <h6><i class="fas fa-bell me-2"></i>Notification envoyée</h6>
-                        <p class="mb-0">
-                            Le secrétaire de séance a été automatiquement informé de votre annulation.
-                            La liste des participants sera mise à jour en conséquence.
-                        </p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-user me-2"></i>Participant</h6>
+                                {% if presence_request.prenom and presence_request.nom %}
+                                <p class="mb-1"><strong>{{ presence_request.prenom }} {{ presence_request.nom }}</strong></p>
+                                {% endif %}
+                                <p class="mb-1 text-muted">{{ presence_request.email }}</p>
+                                {% if presence_request.organisation %}
+                                <p class="mb-0 text-muted">{{ presence_request.organisation }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-clock me-2"></i>Confirmé le</h6>
+                                {% if presence_request.confirmed_at %}
+                                <p class="mb-1">{{ presence_request.confirmed_at|date:"d/m/Y à H:i" }}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-hourglass-half me-1"></i>
+                                    Temps restant pour annuler : 
+                                    <span id="countdown" class="fw-bold text-warning"></span>
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mt-4">
-                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-home me-2"></i>
-                            Retour au tableau de bord
-                        </a>
+                    <!-- Informations réunion -->
+                    <div class="bg-light rounded p-4 mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            {{ presence_request.reunion.titre }}
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <i class="fas fa-clock me-2 text-muted"></i>
+                                    <strong>Date :</strong> {{ presence_request.reunion.date_debut|date:"l d F Y à H:i" }}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <i class="fas fa-map-marker-alt me-2 text-muted"></i>
+                                    <strong>Lieu :</strong> {{ presence_request.reunion.lieu }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Avertissement -->
+                    <div class="alert alert-warning border-0 mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-exclamation-circle fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading mb-2">Êtes-vous certain de vouloir annuler ?</h5>
+                                <p class="mb-2">Cette action aura les conséquences suivantes :</p>
+                                <ul class="mb-0">
+                                    <li>Votre présence sera <strong>définitivement supprimée</strong> de la liste</li>
+                                    <li>Le <strong>secrétaire de séance sera notifié</strong> automatiquement</li>
+                                    <li>Vous ne pourrez <strong>pas vous réinscrire</strong> avec le même lien</li>
+                                    <li>Cette action est <strong>irréversible</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire d'annulation -->
+                    <form method="post" class="mt-4" id="cancellationForm">
+                        {% csrf_token %}
+                        
+                        <!-- Raison optionnelle -->
+                        <div class="mb-4">
+                            <label for="reason" class="form-label">
+                                <i class="fas fa-comment me-2"></i>
+                                Raison de l'annulation (optionnel)
+                            </label>
+                            <textarea class="form-control" id="reason" name="reason" rows="3" 
+                                      placeholder="Ex: Empêchement de dernière minute, erreur de saisie, etc."></textarea>
+                            <div class="form-text">
+                                Cette information sera transmise au secrétaire pour améliorer l'organisation future.
+                            </div>
+                        </div>
+                        
+                        <!-- Boutons d'action -->
+                        <div class="d-grid gap-3">
+                            <button type="submit" name="action" value="cancel" 
+                                    class="btn btn-danger btn-lg py-3" id="confirmBtn">
+                                <i class="fas fa-times-circle me-2"></i>
+                                Oui, annuler définitivement ma présence
+                            </button>
+                            
+                            <a href="javascript:void(0)" onclick="window.close()" 
+                               class="btn btn-outline-success btn-lg py-3">
+                                <i class="fas fa-check me-2"></i>
+                                Non, conserver ma présence
+                            </a>
+                            
+                            <a href="{% url 'dashboard' %}" class="btn btn-link text-center">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Retour au tableau de bord
+                            </a>
+                        </div>
+                    </form>
                 </div>
                 
+                <!-- Footer informatif -->
                 <div class="card-footer bg-light text-center">
                     <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Cette page peut être fermée en sécurité
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Lien d'annulation sécurisé - Valable 5 minutes après confirmation
                     </small>
                 </div>
             </div>
@@ -60,17 +135,134 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Script d\'annulation chargé');
+    
+    // Debug du formulaire
+    const form = document.getElementById('cancellationForm');
+    const submitBtn = document.getElementById('confirmBtn');
+    
+    if (!form) {
+        console.error('Formulaire cancellationForm introuvable');
+        return;
+    }
+    
+    if (!submitBtn) {
+        console.error('Bouton confirmBtn introuvable');
+        return;
+    }
+    
+    console.log('Formulaire et bouton trouvés', {form, submitBtn});
+    
+    {% if presence_request.confirmed_at %}
+    // Calcul du temps restant pour annuler
+    const confirmedAt = new Date('{{ presence_request.confirmed_at|date:"c" }}');
+    const fiveMinutes = 5 * 60 * 1000; // 5 minutes en millisecondes
+    const expiryTime = new Date(confirmedAt.getTime() + fiveMinutes);
+    
+    console.log('Countdown configuré', {confirmedAt, expiryTime});
+    
+    function updateCountdown() {
+        const now = new Date();
+        const remaining = expiryTime.getTime() - now.getTime();
+        
+        if (remaining <= 0) {
+            document.getElementById('countdown').innerHTML = '<span class="text-danger">Expiré</span>';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-clock me-2"></i>Délai d\'annulation expiré';
+            
+            // Afficher message d'expiration
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger mt-3';
+            alertDiv.innerHTML = 
+                '<i class="fas fa-hourglass-end me-2"></i>' +
+                '<strong>Délai expiré :</strong> La période d\'annulation de 5 minutes est terminée.';
+            form.prepend(alertDiv);
+            
+            console.log('Délai d\'annulation expiré');
+            return;
+        }
+        
+        const minutes = Math.floor(remaining / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        
+        document.getElementById('countdown').textContent = 
+            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    // Mettre à jour le countdown toutes les secondes
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+    {% endif %}
+    
+    // Gestionnaire de soumission avec logs
+    form.addEventListener('submit', function(e) {
+        console.log('Formulaire soumis');
+        
+        // Vérifier si le bouton est désactivé
+        if (submitBtn.disabled) {
+            console.log('Soumission bloquée - bouton désactivé');
+            e.preventDefault();
+            return;
+        }
+        
+        const reason = document.getElementById('reason').value.trim();
+        const confirmMessage = reason ? 
+            `Êtes-vous sûr de vouloir annuler votre présence ?\n\nRaison : "${reason}"` :
+            'Êtes-vous sûr de vouloir annuler votre présence ?';
+            
+        console.log('Confirmation demandée:', confirmMessage);
+        
+        if (!confirm(confirmMessage)) {
+            console.log('Annulation refusée par l\'utilisateur');
+            e.preventDefault();
+        } else {
+            console.log('Annulation confirmée par l\'utilisateur');
+            // Désactiver le bouton pour éviter les double-clics
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Annulation en cours...';
+        }
+    });
+    
+    // Debug des clics sur le bouton
+    submitBtn.addEventListener('click', function(e) {
+        console.log('Bouton d\'annulation cliqué');
+    });
+});
+</script>
+
 <style>
-.bg-success {
-    background: linear-gradient(135deg, #28a745, #20c997) !important;
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
 }
 
 .card {
     border-radius: 15px;
 }
 
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+}
+
 .alert {
     border-radius: 10px;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+.btn-danger:hover {
+    animation: pulse 2s infinite;
+}
+
+#countdown {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1em;
 }
 </style>
 {% endblock %}

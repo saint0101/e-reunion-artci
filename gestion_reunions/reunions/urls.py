@@ -38,5 +38,11 @@ urlpatterns = [
     path('cancel/<str:cancel_token>/', views.presence_cancel_by_token, name='presence_cancel'),
     path('debug/secretary-notification/', views.debug_secretary_notification, name='debug_secretary_notification'),
 
+     # URLs d'annulation
+    path('cancel/<str:token>/', views.presence_cancel, name='presence_cancel'),
+    
+    # URL de debug (à supprimer en production)
+    path('debug/secretary-notification/', views.debug_secretary_notification, name='debug_secretary_notification'),
+
 
 ]
