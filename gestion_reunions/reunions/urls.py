@@ -36,5 +36,7 @@ urlpatterns = [
     path('api/send-compte-rendu/<int:pk>/', views.send_compte_rendu, name='send_compte_rendu'),
 
     path('cancel/<str:cancel_token>/', views.presence_cancel_by_token, name='presence_cancel'),
+    path('debug/secretary-notification/', views.debug_secretary_notification, name='debug_secretary_notification'),
+
 
 ]

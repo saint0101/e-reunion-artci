@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import CustomUser, Reunion, PresenceRequest, CompteRendu
+from .models import CustomUser, Reunion, PresenceRequest, CompteRendu, CancellationLog
 
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
@@ -141,6 +141,17 @@ class CompteRenduAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('reunion', 'cree_par')
 
+
+@admin.register(CancellationLog)
+class CancellationLogAdmin(admin.ModelAdmin):
+    list_display = ('presence_request', 'cancelled_at', 'cancelled_by_ip', 'secretary_notified')
+    list_filter = ('secretary_notified', 'cancelled_at')
+    search_fields = ('presence_request__email', 'secretary_email', 'cancellation_reason')
+    date_hierarchy = 'cancelled_at'
+    ordering = ('-cancelled_at',)
+
+
+    
 # Configuration de l'admin
 admin.site.site_header = "Administration - Gestion des Réunions (QR Meeting)"
 admin.site.site_title = "QR Meeting Admin"

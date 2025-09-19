@@ -108,14 +108,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Pas de saisie - bouton désactivé (gris)
             submitBtn.disabled = true;
             submitBtn.className = 'btn btn-secondary btn-lg px-4';
-            btnIcon.className = 'fas fa-envelope me-2';
+            btnIcon.className = 'fas fa-paper-plane me-2';
             btnText.textContent = 'Confirmer';
             
         } else if (emailValue.length > 0 && !isValidEmail(emailValue)) {
             // Saisie en cours mais email incomplet - bouton gris désactivé
             submitBtn.disabled = true;
             submitBtn.className = 'btn btn-secondary btn-lg px-4';
-            btnIcon.className = 'fas fa-envelope me-2';
+            btnIcon.className = 'fas fa-paper-plane me-2';
             btnText.textContent = 'Confirmer';
             
         } else if (isValidEmail(emailValue)) {
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (emailValue.endsWith('@artci.ci')) {
                 // Email ARTCI - bouton orange avec icône check
                 submitBtn.className = 'btn btn-success btn-lg px-4';
-                btnIcon.className = 'fas fa-envelope me-2';
+                btnIcon.className = 'fas fa-paper-plane me-2';
                 btnText.textContent = 'Confirmer';
             } else {
                 // Email externe - bouton orange avec icône flèche
