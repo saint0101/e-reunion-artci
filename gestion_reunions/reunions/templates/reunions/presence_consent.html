@@ -36,7 +36,9 @@
                     <div class="form-check mb-4">
                         <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
                         <label class="form-check-label text-start" for="consent">
-                            J'accepte l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion.
+                            J'accepte 
+                            <!--l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion. 
+                            Mes informations ne seront pas partagées avec des tiers.-->
                         </label>
                     </div>
                     
@@ -109,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.className = 'btn btn-secondary btn-lg px-4';
             btnIcon.className = 'fas fa-edit me-2';
             btnText.textContent = 'Confirmer';
-            emailHelp.innerHTML = 'Saisissez votre adresse email pour continuer';
+            emailHelp.innerHTML = ''; // Saisissez votre adresse email pour continuer
             emailHelp.className = 'form-text';
             
         } else if (emailValue.length > 0 && (!emailValue.includes('@') || !emailValue.includes('.'))) {
@@ -129,15 +131,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Email ARTCI - confirmation automatique
                 submitBtn.className = 'btn btn-success btn-lg px-4';
                 btnIcon.className = 'fas fa-check me-2';
-                btnText.textContent = 'Confirmer automatiquement';
-                emailHelp.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Email ARTCI détecté - Confirmation automatique';
+                btnText.textContent = 'Confirmer';
+                emailHelp.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>'; // Email ARTCI détecté - Confirmation automatique
                 emailHelp.className = 'form-text text-success';
             } else {
                 // Email externe - formulaire complet
                 submitBtn.className = 'btn btn-success btn-lg px-4';
                 btnIcon.className = 'fas fa-arrow-right me-2';
                 btnText.textContent = 'Continuer';
-                emailHelp.innerHTML = '<i class="fas fa-info-circle text-success me-1"></i>Email valide - Formulaire complet requis';
+                emailHelp.innerHTML = '<i class="fas fa-info-circle text-success me-1"></i>'; //Email valide - Formulaire complet requis
                 emailHelp.className = 'form-text text-success';
             }
             
