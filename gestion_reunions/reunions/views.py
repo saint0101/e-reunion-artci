@@ -1318,7 +1318,7 @@ def get_display_name(self):
         return self.email
 
 
-# CORRECTION 2: Vue corrigée sans référence à CancellationLog
+
 def presence_cancel(request, token):
     """Vue pour annuler une demande de présence avec notification au secrétaire"""
     presence_request = get_object_or_404(PresenceRequest, cancellation_token=token)
@@ -1345,16 +1345,42 @@ def presence_cancel(request, token):
             reason = request.POST.get('reason', '').strip()
             
             # Sauvegarder les infos avant annulation pour la notification
-            participant_name = presence_request.get_display_name()  # Maintenant cette méthode existe
+            # Utiliser la méthode existante ou créer le nom
+            if hasattr(presence_request, 'get_display_name'):
+                participant_name = presence_request.get_display_name()
+            else:
+                # Fallback si la méthode n'existe pas
+                if presence_request.prenom and presence_request.nom:
+                    participant_name = f"{presence_request.prenom} {presence_request.nom}"
+                elif presence_request.prenom:
+                    participant_name = presence_request.prenom
+                elif presence_request.nom:
+                    participant_name = presence_request.nom
+                else:
+                    participant_name = presence_request.email
+            
             participant_email = presence_request.email
-            participant_type = presence_request.get_validation_type()
+            
+            # Déterminer le type de participant
+            if hasattr(presence_request, 'get_validation_type'):
+                participant_type = presence_request.get_validation_type()
+            else:
+                participant_type = "ARTCI" if presence_request.email.lower().endswith('@artci.ci') else "Externe"
+            
+            reunion_info = {
+                'titre': presence_request.reunion.titre,
+                'date': presence_request.reunion.date_debut,
+                'lieu': presence_request.reunion.lieu
+            }
+            
+            print(f"🚫 Début annulation pour {participant_email}")
             
             # Annuler la présence
             presence_request.status = 'cancelled'
             presence_request.cancelled_at = timezone.now()
             presence_request.save()
             
-            print(f"🚫 Annulation confirmée pour {participant_email}")
+            print(f"✅ Annulation confirmée pour {participant_email}")
             
             # Envoyer notification au secrétaire
             try:
@@ -1363,7 +1389,8 @@ def presence_cancel(request, token):
                     reason=reason,
                     participant_name=participant_name,
                     participant_email=participant_email,
-                    participant_type=participant_type
+                    participant_type=participant_type,
+                    reunion_info=reunion_info
                 )
                 
                 if notification_sent:
@@ -1390,10 +1417,9 @@ def presence_cancel(request, token):
         'presence_request': presence_request
     })
 
-
 def send_cancellation_notification_to_secretary(presence_request, reason=None, 
                                                participant_name=None, participant_email=None, 
-                                               participant_type=None):
+                                               participant_type=None, reunion_info=None):
     """
     Envoie une notification d'annulation au secrétaire de la réunion
     """
@@ -1403,19 +1429,19 @@ def send_cancellation_notification_to_secretary(presence_request, reason=None,
     secretary_email = None
     
     # 1. Chercher le secrétaire assigné à la réunion
-    if hasattr(reunion, 'secretaire') and reunion.secretaire and hasattr(reunion.secretaire, 'email'):
+    if hasattr(reunion, 'secretaire') and reunion.secretaire and hasattr(reunion.secretaire, 'email') and reunion.secretaire.email:
         secretary_email = reunion.secretaire.email
         print(f"📧 Secrétaire trouvé dans reunion.secretaire: {secretary_email}")
     
     # 2. Sinon chercher l'organisateur
-    elif hasattr(reunion, 'organisateur') and reunion.organisateur and hasattr(reunion.organisateur, 'email'):
+    elif hasattr(reunion, 'organisateur') and reunion.organisateur and hasattr(reunion.organisateur, 'email') and reunion.organisateur.email:
         secretary_email = reunion.organisateur.email
         print(f"📧 Secrétaire trouvé dans reunion.organisateur: {secretary_email}")
     
     # 3. Sinon utiliser l'email de fallback depuis settings
     else:
         secretary_email = getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 
-                                settings.DEFAULT_FROM_EMAIL)
+                                getattr(settings, 'DEFAULT_FROM_EMAIL', 'admin@artci.ci'))
         print(f"📧 Utilisation email de fallback: {secretary_email}")
     
     if not secretary_email:
@@ -1427,11 +1453,11 @@ def send_cancellation_notification_to_secretary(presence_request, reason=None,
     subject = f"🚫 Annulation de présence - {reunion.titre}"
     
     # Utiliser les paramètres passés ou les extraire de presence_request
-    participant_name = participant_name or presence_request.get_display_name()
+    participant_name = participant_name or presence_request.email
     participant_email = participant_email or presence_request.email
-    participant_type = participant_type or presence_request.get_validation_type()
+    participant_type = participant_type or ("ARTCI" if presence_request.email.lower().endswith('@artci.ci') else "Externe")
     
-    # Contenu texte pour le secrétaire (version simplifiée sans template HTML pour éviter les erreurs)
+    # Contenu texte pour le secrétaire
     text_content = f"""
 NOTIFICATION D'ANNULATION DE PRÉSENCE
 =====================================
@@ -1474,19 +1500,21 @@ Système QR Meeting
     
     try:
         print(f"📤 Configuration email:")
-        print(f"   - From: {settings.DEFAULT_FROM_EMAIL}")
+        print(f"   - Backend: {getattr(settings, 'EMAIL_BACKEND', 'Non défini')}")
+        print(f"   - Host: {getattr(settings, 'EMAIL_HOST', 'Non défini')}")
+        print(f"   - From: {getattr(settings, 'DEFAULT_FROM_EMAIL', 'Non défini')}")
         print(f"   - To: {secretary_email}")
         
-        # Utiliser send_mail simple pour éviter les problèmes
-        from django.core.mail import send_mail
-        
-        result = send_mail(
+        # Créer l'email
+        email = EmailMultiAlternatives(
             subject=subject,
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[secretary_email],
-            fail_silently=False
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'qrmeeting@artci.ci'),
+            to=[secretary_email]
         )
+        
+        # Envoyer
+        result = email.send()
         
         print(f"✅ Notification d'annulation envoyée au secrétaire: {secretary_email} (résultat: {result})")
         return True
@@ -1495,9 +1523,9 @@ Système QR Meeting
         print(f"❌ Erreur envoi notification secrétaire: {e}")
         print(f"   Type erreur: {type(e).__name__}")
         return False
-
-
 # Debug de la configuration email (vue temporaire)
+
+
 def debug_secretary_notification(request):
 
     """Vue de debug pour tester l'envoi au secrétaire"""

@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import CustomUser, Reunion, PresenceRequest, CompteRendu, CancellationLog
+from .models import CustomUser, Reunion, PresenceRequest, CompteRendu
+from .models import CancellationLog
+
 
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
