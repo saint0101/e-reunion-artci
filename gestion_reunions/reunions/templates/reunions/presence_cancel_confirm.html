@@ -83,10 +83,11 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Formulaire d'annulation -->
-                    <form method="post" class="mt-4" id="cancellationForm">
+                    <form method="post" action="" class="mt-4" id="cancellationForm">
                         {% csrf_token %}
+                        
+                        <!-- Champ action caché pour garantir la transmission -->
+                        <input type="hidden" name="action" value="cancel" id="actionField">
                         
                         <!-- Raison optionnelle -->
                         <div class="mb-4">
@@ -95,7 +96,7 @@
                                 Raison de l'annulation (optionnel)
                             </label>
                             <textarea class="form-control" id="reason" name="reason" rows="3" 
-                                      placeholder="Ex: Empêchement de dernière minute, erreur de saisie, etc."></textarea>
+                                    placeholder="Ex: Empêchement de dernière minute, erreur de saisie, etc."></textarea>
                             <div class="form-text">
                                 Cette information sera transmise au secrétaire pour améliorer l'organisation future.
                             </div>
@@ -103,14 +104,13 @@
                         
                         <!-- Boutons d'action -->
                         <div class="d-grid gap-3">
-                            <button type="submit" name="action" value="cancel" 
-                                    class="btn btn-danger btn-lg py-3" id="confirmBtn">
+                            <button type="submit" class="btn btn-danger btn-lg py-3" id="confirmBtn">
                                 <i class="fas fa-times-circle me-2"></i>
                                 Oui, annuler définitivement ma présence
                             </button>
                             
                             <a href="javascript:void(0)" onclick="window.close()" 
-                               class="btn btn-outline-success btn-lg py-3">
+                            class="btn btn-outline-success btn-lg py-3">
                                 <i class="fas fa-check me-2"></i>
                                 Non, conserver ma présence
                             </a>
@@ -121,6 +121,8 @@
                             </a>
                         </div>
                     </form>
+                    <!-- Formulaire d'annulation -->
+
                 </div>
                 
                 <!-- Footer informatif -->
@@ -142,6 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Debug du formulaire
     const form = document.getElementById('cancellationForm');
     const submitBtn = document.getElementById('confirmBtn');
+    const actionField = document.getElementById('actionField');
     
     if (!form) {
         console.error('Formulaire cancellationForm introuvable');
@@ -153,7 +156,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    console.log('Formulaire et bouton trouvés', {form, submitBtn});
+    if (!actionField) {
+        console.error('Champ action introuvable');
+        return;
+    }
+    
+    console.log('Formulaire, bouton et champ action trouvés', {
+        form: form,
+        submitBtn: submitBtn,
+        actionValue: actionField.value
+    });
     
     {% if presence_request.confirmed_at %}
     // Calcul du temps restant pour annuler
@@ -187,8 +199,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const minutes = Math.floor(remaining / (1000 * 60));
         const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
         
-        document.getElementById('countdown').textContent = 
-            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const countdownElement = document.getElementById('countdown');
+        if (countdownElement) {
+            countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
     }
     
     // Mettre à jour le countdown toutes les secondes
@@ -196,8 +210,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateCountdown, 1000);
     {% endif %}
     
-    // Gestionnaire de soumission avec logs
+    // Gestionnaire de soumission avec logs détaillés
     form.addEventListener('submit', function(e) {
+        console.log('=== SOUMISSION FORMULAIRE ===');
         console.log('Formulaire soumis');
         
         // Vérifier si le bouton est désactivé
@@ -205,6 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Soumission bloquée - bouton désactivé');
             e.preventDefault();
             return;
+        }
+        
+        // Vérifier les données du formulaire
+        const formData = new FormData(form);
+        console.log('Données du formulaire:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: ${value}`);
         }
         
         const reason = document.getElementById('reason').value.trim();
@@ -219,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         } else {
             console.log('Annulation confirmée par l\'utilisateur');
+            console.log('Action envoyée:', actionField.value);
             // Désactiver le bouton pour éviter les double-clics
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Annulation en cours...';
@@ -228,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Debug des clics sur le bouton
     submitBtn.addEventListener('click', function(e) {
         console.log('Bouton d\'annulation cliqué');
+        console.log('Valeur du champ action:', actionField.value);
     });
 });
 </script>
