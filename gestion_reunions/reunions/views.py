@@ -1318,6 +1318,73 @@ def get_display_name(self):
         return self.email
 
 
+def debug_secretary_notification(request):
+
+    """Vue de debug pour tester l'envoi au secrétaire"""
+    if not settings.DEBUG:
+        return JsonResponse({'error': 'Debug mode only'})
+    
+    # Test d'envoi rapide
+    test_context = {
+        'participant_name': 'Test User',
+        'participant_email': 'test@example.com',
+        'participant_type': 'ARTCI',
+        'cancellation_reason': 'Test de notification',
+        'secretary_email': getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 'qrmeeting@artci.ci'),
+        'cancelled_at': timezone.now(),
+    }
+    
+    subject = "🧪 Test notification secrétaire"
+    text_content = f"""
+TEST DE NOTIFICATION SECRÉTAIRE
+===============================
+
+Ceci est un test d'envoi de notification au secrétaire.
+
+Configuration actuelle:
+- SECRETARY_NOTIFICATION_EMAIL: {getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 'Non défini')}
+- DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}
+- EMAIL_BACKEND: {settings.EMAIL_BACKEND}
+- EMAIL_HOST: {settings.EMAIL_HOST}
+
+Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
+"""
+    
+    try:
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[test_context['secretary_email']]
+        )
+        
+        result = email.send()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Test envoyé à {test_context["secretary_email"]}',
+            'result': result,
+            'config': {
+                'secretary_email': test_context['secretary_email'],
+                'from_email': settings.DEFAULT_FROM_EMAIL,
+                'backend': settings.EMAIL_BACKEND,
+                'host': settings.EMAIL_HOST,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'config': {
+                'secretary_email': test_context['secretary_email'],
+                'from_email': settings.DEFAULT_FROM_EMAIL,
+                'backend': settings.EMAIL_BACKEND,
+                'host': settings.EMAIL_HOST,
+            }
+        })
+    
 
 def presence_cancel(request, token):
     """Vue pour annuler une demande de présence avec notification au secrétaire"""
@@ -1333,7 +1400,7 @@ def presence_cancel(request, token):
     if presence_request.confirmed_at:
         time_since_confirmation = timezone.now() - presence_request.confirmed_at
         if time_since_confirmation > timedelta(minutes=5):
-            messages.error(request, "La période d'annulation a expiré ( 60 minutes maximum).")
+            messages.error(request, "La période d'annulation a expiré (5 minutes maximum).")
             return render(request, 'reunions/presence_cancel_expired.html', {
                 'presence_request': presence_request
             })
@@ -1416,6 +1483,7 @@ def presence_cancel(request, token):
     return render(request, 'reunions/presence_cancel_confirm.html', {
         'presence_request': presence_request
     })
+
 
 def send_cancellation_notification_to_secretary(presence_request, reason=None, 
                                                participant_name=None, participant_email=None, 
@@ -1523,73 +1591,3 @@ Système QR Meeting
         print(f"❌ Erreur envoi notification secrétaire: {e}")
         print(f"   Type erreur: {type(e).__name__}")
         return False
-# Debug de la configuration email (vue temporaire)
-
-
-def debug_secretary_notification(request):
-
-    """Vue de debug pour tester l'envoi au secrétaire"""
-    if not settings.DEBUG:
-        return JsonResponse({'error': 'Debug mode only'})
-    
-    # Test d'envoi rapide
-    test_context = {
-        'participant_name': 'Test User',
-        'participant_email': 'test@example.com',
-        'participant_type': 'ARTCI',
-        'cancellation_reason': 'Test de notification',
-        'secretary_email': getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 'qrmeeting@artci.ci'),
-        'cancelled_at': timezone.now(),
-    }
-    
-    subject = "🧪 Test notification secrétaire"
-    text_content = f"""
-TEST DE NOTIFICATION SECRÉTAIRE
-===============================
-
-Ceci est un test d'envoi de notification au secrétaire.
-
-Configuration actuelle:
-- SECRETARY_NOTIFICATION_EMAIL: {getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 'Non défini')}
-- DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}
-- EMAIL_BACKEND: {settings.EMAIL_BACKEND}
-- EMAIL_HOST: {settings.EMAIL_HOST}
-
-Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
-"""
-    
-    try:
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[test_context['secretary_email']]
-        )
-        
-        result = email.send()
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Test envoyé à {test_context["secretary_email"]}',
-            'result': result,
-            'config': {
-                'secretary_email': test_context['secretary_email'],
-                'from_email': settings.DEFAULT_FROM_EMAIL,
-                'backend': settings.EMAIL_BACKEND,
-                'host': settings.EMAIL_HOST,
-            }
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'error_type': type(e).__name__,
-            'config': {
-                'secretary_email': test_context['secretary_email'],
-                'from_email': settings.DEFAULT_FROM_EMAIL,
-                'backend': settings.EMAIL_BACKEND,
-                'host': settings.EMAIL_HOST,
-            }
-        })
-    
