@@ -269,6 +269,74 @@ LOG_DIR = BASE_DIR / 'logs'
 if not LOG_DIR.exists():
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+# Configuration pour les notifications
+SECRETARY_NOTIFICATION_EMAIL = os.environ.get('SECRETARY_NOTIFICATION_EMAIL', 'qrmeeting@artci.ci')
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    # === FORMATTERS ===
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+
+    # === HANDLERS ===
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': LOG_DIR / 'django.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'cancellation_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/cancellations.log',
+            'formatter': 'verbose',
+        },
+    },
+
+    # === ROOT LOGGER ===
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+
+    # === CUSTOM LOGGERS ===
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else 'ERROR',
+            'propagate': False,
+        },
+        'reunions.cancellations': {
+            'handlers': ['cancellation_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+"""
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -313,6 +381,7 @@ LOGGING = {
     },
 }
 
+"""
 # REDIS CONFIGURATION
 CACHES = {
     'default': {

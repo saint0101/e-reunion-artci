@@ -390,3 +390,23 @@ class PresenceRequest(models.Model):
             self.save()
             return True
         return False
+
+
+class CancellationLog(models.Model):
+    """
+    Modèle optionnel pour tracer toutes les annulations
+    """
+    presence_request = models.ForeignKey(PresenceRequest, on_delete=models.CASCADE)
+    cancelled_at = models.DateTimeField(auto_now_add=True)
+    cancelled_by_ip = models.GenericIPAddressField(blank=True, null=True)
+    secretary_notified = models.BooleanField(default=False)
+    secretary_email = models.EmailField(blank=True)
+    cancellation_reason = models.TextField(blank=True, help_text="Raison optionnelle")
+    
+    class Meta:
+        verbose_name = 'Log d\'annulation'
+        verbose_name_plural = 'Logs d\'annulation'
+        ordering = ['-cancelled_at']
+    
+    def __str__(self):
+        return f"Annulation - {self.presence_request.email} - {self.cancelled_at.strftime('%d/%m/%Y %H:%M')}"

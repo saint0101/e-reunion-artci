@@ -1223,3 +1223,173 @@ def auto_confirm_pending_requests():
     
     return confirmed_count
 
+
+
+def presence_cancel_by_token(request, cancel_token):
+    """Annulation via le token d'annulation avec notification au secrétaire"""
+    try:
+        presence_request = get_object_or_404(
+            PresenceRequest, 
+            cancellation_token=cancel_token,
+            status='confirmed'
+        )
+        
+        # Vérifier que la fenêtre d'annulation est encore ouverte (5 minutes)
+        if presence_request.confirmed_at:
+            time_since_confirmation = timezone.now() - presence_request.confirmed_at
+            if time_since_confirmation > timedelta(minutes=5):
+                messages.error(request, "La période d'annulation a expiré.")
+                return render(request, 'reunions/cancellation_expired.html', {
+                    'presence_request': presence_request
+                })
+        
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            if action == 'cancel':
+                # Annuler la présence
+                presence_request.cancel_presence()
+                
+                # Envoyer notification au secrétaire
+                notification_sent = send_cancellation_notification_to_secretary(presence_request)
+                
+                # Message de succès adapté selon l'envoi de notification
+                if notification_sent:
+                    messages.success(request, 
+                        "Votre présence a été annulée avec succès. "
+                        "Le secrétaire de séance a été notifié.")
+                else:
+                    messages.success(request, 
+                        "Votre présence a été annulée avec succès.")
+                    messages.warning(request, 
+                        "La notification au secrétaire n'a pas pu être envoyée.")
+                
+                return render(request, 'reunions/presence_cancelled.html', {
+                    'presence_request': presence_request,
+                    'notification_sent': notification_sent
+                })
+        
+        return render(request, 'reunions/confirm_cancellation.html', {
+            'presence_request': presence_request
+        })
+        
+    except:
+        messages.error(request, "Lien d'annulation invalide ou expiré.")
+        return redirect('dashboard')
+
+
+def send_cancellation_notification_to_secretary(presence_request):
+    """
+    Envoie une notification d'annulation au secrétaire de la réunion
+    """
+    reunion = presence_request.reunion
+    
+    # Identifier le secrétaire (ajustez selon votre modèle)
+    secretary_email = None
+    
+    if hasattr(reunion, 'secretaire') and reunion.secretaire:
+        secretary_email = reunion.secretaire.email
+    elif hasattr(reunion, 'organisateur') and reunion.organisateur:
+        secretary_email = reunion.organisateur.email
+    else:
+        # Email de fallback (admin système ou autre)
+        secretary_email = getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 
+                                settings.DEFAULT_FROM_EMAIL)
+    
+    if not secretary_email:
+        print("❌ Aucun email de secrétaire trouvé pour la notification d'annulation")
+        return False
+    
+    subject = f"Annulation de présence - {reunion.titre}"
+    
+    # Contexte pour le template
+    context = {
+        'presence_request': presence_request,
+        'reunion': reunion,
+        'cancelled_at': timezone.now(),
+        'participant_name': presence_request.get_display_name(),
+        'participant_email': presence_request.email,
+        'participant_type': presence_request.get_validation_type(),
+    }
+    
+    # Template HTML pour le secrétaire
+    try:
+        html_content = render_to_string('reunions/email_cancellation_secretary.html', context)
+    except Exception as e:
+        print(f"⚠️ Erreur template HTML notification secrétaire: {e}")
+        html_content = None
+    
+    # Contenu texte pour le secrétaire
+    text_content = f"""
+Bonjour,
+
+Une annulation de présence vient d'avoir lieu pour la réunion "{reunion.titre}".
+
+DÉTAILS DE L'ANNULATION :
+=======================
+• Participant : {presence_request.get_display_name()}
+• Email : {presence_request.email}
+• Type : {presence_request.get_validation_type()}
+• Organisation : {presence_request.organisation or 'Non spécifiée'}
+• Date d'annulation : {timezone.now().strftime('%d/%m/%Y à %H:%M')}
+
+DÉTAILS DE LA RÉUNION :
+=====================
+• Titre : {reunion.titre}
+• Date : {reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
+• Lieu : {reunion.lieu}
+
+ACTIONS RECOMMANDÉES :
+====================
+- Mettre à jour la liste des participants
+- Vérifier si des ajustements logistiques sont nécessaires
+- Contacter le participant si besoin de clarification
+
+Cette notification a été générée automatiquement par le système QR Meeting.
+
+Cordialement,
+Système de gestion des présences QR Meeting
+"""
+    
+    try:
+        # Créer l'email
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[secretary_email]
+        )
+        
+        # Ajouter version HTML si disponible
+        if html_content:
+            email.attach_alternative(html_content, "text/html")
+        
+        # Envoyer
+        result = email.send()
+        
+        print(f"✅ Notification d'annulation envoyée au secrétaire : {secretary_email}")
+        
+        # Optionnel : Log l'annulation en base
+        log_cancellation_event(presence_request, secretary_email)
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur envoi notification secrétaire: {e}")
+        return False
+
+
+def log_cancellation_event(presence_request, notified_email):
+    """
+    Enregistre l'événement d'annulation dans les logs
+    (Optionnel : créer un modèle CancellationLog si besoin de traçabilité complète)
+    """
+    import logging
+    
+    logger = logging.getLogger('reunions.cancellations')
+    
+    logger.info(
+        f"ANNULATION - Réunion: {presence_request.reunion.titre} | "
+        f"Participant: {presence_request.email} ({presence_request.get_display_name()}) | "
+        f"Secrétaire notifié: {notified_email} | "
+        f"Timestamp: {timezone.now().isoformat()}"
+    )

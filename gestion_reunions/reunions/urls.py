@@ -34,4 +34,7 @@ urlpatterns = [
     # Ajax endpoints
     path('api/reunion/<int:pk>/status/', views.update_reunion_status, name='update_reunion_status'),
     path('api/send-compte-rendu/<int:pk>/', views.send_compte_rendu, name='send_compte_rendu'),
+
+    path('cancel/<str:cancel_token>/', views.presence_cancel_by_token, name='presence_cancel'),
+
 ]
