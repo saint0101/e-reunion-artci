@@ -122,17 +122,18 @@ document.getElementById('email').addEventListener('input', function() {
     const formText = document.querySelector('.form-text');
     
     if (emailValue.endsWith('@artci.ci')) {
-        formText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Email ARTCI détecté - Confirmation automatique';
+        formText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>'; // Email ARTCI détecté - Confirmation automatique
         formText.className = 'form-text text-success';
         submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirmer';
         submitBtn.className = 'btn btn-primary btn-lg px-4';
     } else if (emailValue.includes('@') && emailValue.includes('.')) {
-        formText.innerHTML = '<i class="fas fa-info-circle text-info me-1"></i>Email externe - Formulaire complet requis';
+        formText.innerHTML = '<i class="fas fa-info-circle text-info me-1"></i>'; // Email externe - Formulaire complet requis
         formText.className = 'form-text text-info';
         submitBtn.innerHTML = '<i class="fas fa-edit me-2"></i>Continuer';
         submitBtn.className = 'btn btn-success btn-lg px-4';
     } else {
-        formText.innerHTML = 'Les emails @artci.ci sont confirmés automatiquement. Les autres emails nécessiteront de remplir un formulaire complet.';
+        // Les emails @artci.ci sont confirmés automatiquement. Les autres emails nécessiteront de remplir un formulaire complet.
+        formText.innerHTML = '';
         formText.className = 'form-text';
         submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Confirmer ma Présence';
         submitBtn.className = 'btn btn-success btn-lg px-4';
