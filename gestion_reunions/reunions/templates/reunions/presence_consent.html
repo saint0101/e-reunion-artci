@@ -114,14 +114,14 @@ document.addEventListener('DOMContentLoaded', function() {
             emailHelp.innerHTML = ''; // Saisissez votre adresse email pour continuer
             emailHelp.className = 'form-text';
             
-        } else if (emailValue.length > 0 && (!emailValue.includes('@') || !emailValue.includes('.'))) {
+        /*} else if (emailValue.length > 0 && (!emailValue.includes('@') || !emailValue.includes('.'))) {
             // Saisie en cours mais email incomplet - bouton orange
             submitBtn.disabled = false;
             submitBtn.className = 'btn btn-warning btn-lg px-4';
             btnIcon.className = 'fas fa-edit me-2';
             btnText.textContent = 'Confirmer';
             emailHelp.innerHTML = '<i class="fas fa-pencil-alt text-warning me-1"></i>Continuez la saisie de votre email...';
-            emailHelp.className = 'form-text text-warning';
+            emailHelp.className = 'form-text text-warning';*/
             
         } else if (isValidEmail(emailValue)) {
             // Email valide - bouton vert
