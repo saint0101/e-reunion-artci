@@ -1,39 +1,36 @@
+PRESENCE_CANCELLED_TEMPLATE = '''
 {% extends 'reunions/base.html' %}
-{% load static %}
 
-{% block title %}Inscription annulée - {{ reunion.titre }}{% endblock %}
+{% block title %}Présence Annulée{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">✅ Inscription annulée</h4>
+            <div class="card shadow border-0">
+                <div class="card-header bg-success text-white text-center">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <h3 class="mb-0">Annulation Confirmée</h3>
                 </div>
-                <div class="card-body text-center">
-                    <div class="alert alert-success">
-                        <h5>🚫 Annulation confirmée</h5>
-                        <p>Votre inscription à la réunion suivante a été annulée avec succès :</p>
+                
+                <div class="card-body text-center p-4">
+                    <div class="alert alert-success border-0">
+                        <h5>Votre présence a été annulée avec succès</h5>
+                        <p class="mb-0">Le secrétaire de séance a été notifié de cette annulation.</p>
                     </div>
-
-                    <!-- Informations réunion -->
-                    <div class="alert alert-info">
-                        <h5>📅 {{ reunion.titre }}</h5>
-                        <p class="mb-1"><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
-                        <p class="mb-0"><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                    
+                    <div class="bg-light rounded p-4 mb-4">
+                        <h5 class="text-primary mb-3">{{ reunion.titre }}</h5>
+                        <p><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                        <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                        {% if participant_name %}
+                        <p><strong>Participant :</strong> {{ participant_name }}</p>
+                        {% endif %}
                     </div>
-
+                    
                     <p class="text-muted">
-                        Si vous changez d'avis, vous devrez scanner à nouveau le QR code 
-                        pour vous réinscrire à cette réunion.
+                        Vous pouvez maintenant fermer cette page.
                     </p>
-
-                    <!--<div class="mt-4">
-                        <a href="{% url 'dashboard' %}" class="btn btn-primary">
-                            🏠 Retour à l'accueil
-                        </a>
-                    </div>-->
                 </div>
             </div>
         </div>

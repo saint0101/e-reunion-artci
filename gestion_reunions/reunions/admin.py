@@ -151,7 +151,6 @@ class CancellationLogAdmin(admin.ModelAdmin):
     ordering = ('-cancelled_at',)
 
 
-    
 # Configuration de l'admin
 admin.site.site_header = "Administration - Gestion des Réunions (QR Meeting)"
 admin.site.site_title = "QR Meeting Admin"
