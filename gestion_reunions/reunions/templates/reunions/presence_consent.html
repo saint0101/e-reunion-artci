@@ -37,8 +37,7 @@
                         <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
                         <label class="form-check-label text-start" for="consent">
                             J'accepte 
-                            <!--l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion. 
-                            Mes informations ne seront pas partagées avec des tiers.-->
+                            <!--l'utilisation de mes données personnelles pour confirmer ma présence à cette réunion.-->
                         </label>
                     </div>
                     
@@ -106,51 +105,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const emailValue = this.value.trim();
         
         if (emailValue.length === 0) {
-            // Pas de saisie - bouton désactivé
+            // Pas de saisie - bouton désactivé (gris)
             submitBtn.disabled = true;
             submitBtn.className = 'btn btn-secondary btn-lg px-4';
             btnIcon.className = 'fas fa-edit me-2';
             btnText.textContent = 'Confirmer';
-            emailHelp.innerHTML = ''; // Saisissez votre adresse email pour continuer
-            emailHelp.className = 'form-text';
             
-        /*} else if (emailValue.length > 0 && (!emailValue.includes('@') || !emailValue.includes('.'))) {
-            // Saisie en cours mais email incomplet - bouton orange
-            submitBtn.disabled = false;
-            submitBtn.className = 'btn btn-warning btn-lg px-4';
+        } else if (emailValue.length > 0 && !isValidEmail(emailValue)) {
+            // Saisie en cours mais email incomplet - bouton gris désactivé
+            submitBtn.disabled = true;
+            submitBtn.className = 'btn btn-secondary btn-lg px-4';
             btnIcon.className = 'fas fa-edit me-2';
             btnText.textContent = 'Confirmer';
-            emailHelp.innerHTML = '<i class="fas fa-pencil-alt text-warning me-1"></i>Continuez la saisie de votre email...';
-            emailHelp.className = 'form-text text-warning';*/
             
         } else if (isValidEmail(emailValue)) {
-            // Email valide - bouton vert
+            // Email avec format valide - vérifier le type et activer bouton orange
             submitBtn.disabled = false;
             
             if (emailValue.endsWith('@artci.ci')) {
-                // Email ARTCI - confirmation automatique
-                submitBtn.className = 'btn btn-success btn-lg px-4';
+                // Email ARTCI - bouton orange avec icône check
+                submitBtn.className = 'btn btn-warning btn-lg px-4';
                 btnIcon.className = 'fas fa-check me-2';
                 btnText.textContent = 'Confirmer';
-                emailHelp.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>'; // Email ARTCI détecté - Confirmation automatique
-                emailHelp.className = 'form-text text-success';
             } else {
-                // Email externe - formulaire complet
-                submitBtn.className = 'btn btn-success btn-lg px-4';
+                // Email externe - bouton orange avec icône flèche
+                submitBtn.className = 'btn btn-warning btn-lg px-4';
                 btnIcon.className = 'fas fa-arrow-right me-2';
                 btnText.textContent = 'Continuer';
-                emailHelp.innerHTML = '<i class="fas fa-info-circle text-success me-1"></i>'; //Email valide - Formulaire complet requis
-                emailHelp.className = 'form-text text-success';
             }
-            
-        } else {
-            // Format d'email invalide - bouton orange
-            submitBtn.disabled = false;
-            submitBtn.className = 'btn btn-warning btn-lg px-4';
-            btnIcon.className = 'fas fa-exclamation-triangle me-2';
-            btnText.textContent = 'Format invalide';
-            emailHelp.innerHTML = '<i class="fas fa-exclamation-triangle text-warning me-1"></i>Format d\'email invalide';
-            emailHelp.className = 'form-text text-warning';
         }
     });
 });
