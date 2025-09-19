@@ -1,45 +1,76 @@
 {% extends 'reunions/base.html' %}
-{% load static %}
 
-{% block title %}Annuler l'inscription - {{ presence_request.reunion.titre }}{% endblock %}
+{% block title %}Présence annulée{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">Annuler</h4>
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-success text-white text-center py-4">
+                    <i class="fas fa-check-circle fa-4x mb-3"></i>
+                    <h3 class="mb-0">Annulation confirmée</h3>
+                    <p class="mb-0 mt-2 opacity-75">Votre demande a été traitée</p>
                 </div>
-                <div class="card-body text-center">
-                    <!-- Informations réunion -->
-                    <div class="alert alert-info">
-                        <h5>📅 {{ presence_request.reunion.titre }}</h5>
-                        <p class="mb-1"><strong>Date :</strong> {{ presence_request.reunion.date_debut|date:"d/m/Y à H:i" }}</p>
-                        <p class="mb-1"><strong>Lieu :</strong> {{ presence_request.reunion.lieu }}</p>
-                        <p class="mb-0"><strong>Email :</strong> {{ presence_request.email }}</p>
+                
+                <div class="card-body text-center p-4">
+                    <div class="alert alert-success border-0 mb-4">
+                        <h5 class="alert-heading">Annulation réussie</h5>
+                        <p class="mb-0">
+                            Votre présence a été annulée avec succès pour la réunion 
+                            <strong>"{{ reunion.titre }}"</strong>.
+                        </p>
                     </div>
 
-                    <div class="alert alert-warning">
-                        <h5>Confirmer </h5>
-                        <p>Êtes-vous sûr de vouloir annuler votre inscription à cette réunion ?</p>
-                        <p class="mb-0"><strong>Cette action est irréversible.</strong></p>
+                    <div class="bg-light rounded p-4 mb-4">
+                        <h6 class="text-muted mb-3">Résumé de l'annulation</h6>
+                        <p><strong>Réunion :</strong> {{ reunion.titre }}</p>
+                        <p><strong>Date :</strong> {{ reunion.date_debut|date:"l d F Y à H:i" }}</p>
+                        <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                        {% if participant_name %}
+                        <p><strong>Participant :</strong> {{ participant_name }}</p>
+                        {% endif %}
+                        <p><strong>Annulé le :</strong> {{ "now"|date:"d/m/Y à H:i" }}</p>
                     </div>
 
-                    <form method="post" class="mt-4">
-                        {% csrf_token %}
-                        <div class="d-grid gap-2">
-                            <button type="submit" name="action" value="cancel" class="btn btn-danger btn-lg">
-                                Oui
-                            </button>
-                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                                ↩️ Non, garder mon inscription
-                            </a>
-                        </div>
-                    </form>
+                    <div class="alert alert-info border-0 mb-4">
+                        <h6><i class="fas fa-bell me-2"></i>Notification envoyée</h6>
+                        <p class="mb-0">
+                            Le secrétaire de séance a été automatiquement informé de votre annulation.
+                            La liste des participants sera mise à jour en conséquence.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-home me-2"></i>
+                            Retour au tableau de bord
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Cette page peut être fermée en sécurité
+                    </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+}
+
+.card {
+    border-radius: 15px;
+}
+
+.alert {
+    border-radius: 10px;
+}
+</style>
 {% endblock %}

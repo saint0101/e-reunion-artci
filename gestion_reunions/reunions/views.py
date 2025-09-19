@@ -1329,11 +1329,11 @@ def presence_cancel(request, token):
             'presence_request': presence_request
         })
     
-    # Vérifier la fenêtre de 5 minutes
+    # Vérifier la fenêtre de 60 minutes
     if presence_request.confirmed_at:
         time_since_confirmation = timezone.now() - presence_request.confirmed_at
-        if time_since_confirmation > timedelta(minutes=5):
-            messages.error(request, "La période d'annulation a expiré (5 minutes maximum).")
+        if time_since_confirmation > timedelta(minutes=60):
+            messages.error(request, "La période d'annulation a expiré (60 minutes maximum).")
             return render(request, 'reunions/presence_cancel_expired.html', {
                 'presence_request': presence_request
             })

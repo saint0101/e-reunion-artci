@@ -1,0 +1,85 @@
+
+{% extends 'reunions/base.html' %}
+{% load static %}
+
+{% block title %}Délai d'annulation expiré{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-warning text-dark text-center py-4">
+                    <i class="fas fa-clock fa-3x mb-3"></i>
+                    <h3 class="mb-0">Délai d'annulation expiré</h3>
+                </div>
+                
+                <div class="card-body p-4 text-center">
+                    <div class="alert alert-warning border-0 mb-4">
+                        <h5 class="alert-heading">Trop tard pour annuler</h5>
+                        <p class="mb-0">
+                            Le délai de 5 minutes pour annuler votre présence est dépassé.
+                            Cette mesure de sécurité empêche les annulations accidentelles tardives.
+                        </p>
+                    </div>
+
+                    <!-- Informations présence -->
+                    <div class="bg-light rounded p-4 mb-4">
+                        <h5 class="text-primary mb-3">Votre présence confirmée</h5>
+                        <p><strong>Réunion :</strong> {{ presence_request.reunion.titre }}</p>
+                        <p><strong>Date :</strong> {{ presence_request.reunion.date_debut|date:"l d F Y à H:i" }}</p>
+                        <p><strong>Lieu :</strong> {{ presence_request.reunion.lieu }}</p>
+                        <p><strong>Email :</strong> {{ presence_request.email }}</p>
+                        {% if presence_request.confirmed_at %}
+                        <p><strong>Confirmé le :</strong> {{ presence_request.confirmed_at|date:"d/m/Y à H:i" }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert alert-info border-0">
+                        <h6><i class="fas fa-info-circle me-2"></i>Que faire maintenant ?</h6>
+                        <p class="mb-2">Si vous ne pouvez vraiment pas participer à cette réunion :</p>
+                        <ul class="text-start mb-0">
+                            <li>Contactez directement l'organisateur ou le secrétaire</li>
+                            <li>Envoyez un email d'excuse avec vos coordonnées</li>
+                            <li>Votre présence reste officiellement confirmée jusqu'à contact direct</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg me-2">
+                            <i class="fas fa-home me-2"></i>
+                            Retour au tableau de bord
+                        </a>
+                        
+                        <button class="btn btn-outline-secondary" onclick="window.close()">
+                            <i class="fas fa-times me-2"></i>
+                            Fermer cette page
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Système de sécurité - Délai d'annulation : 5 minutes après confirmation
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14) !important;
+}
+
+.card {
+    border-radius: 15px;
+}
+
+.alert {
+    border-radius: 10px;
+}
+</style>
+{% endblock %}
