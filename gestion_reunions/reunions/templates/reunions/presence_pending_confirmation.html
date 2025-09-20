@@ -37,7 +37,7 @@
                         <h5>⏰ Confirmation automatique</h5>
                         <p>Un email de confirmation avec lien d'annulation vous a été envoyé.</p>
                         <p class="mb-1">
-                            <strong>Si vous ne cliquez pas sur "Annuler" dans les 5 minutes, 
+                            <strong>Si vous ne cliquez pas sur "Annuler" dans les 1 heure, 
                             votre présence sera automatiquement confirmée.</strong>
                         </p>
                         <div id="countdown-timer" class="mt-3">
@@ -93,10 +93,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     
-    // Arrêter le timer après 5 minutes
+    // Arrêter le timer après 1 heure
     setTimeout(() => {
+    clearInterval(interval);
+    }, 60 * 60 * 1000); // 1 heure en millisecondes
+
+    /*setTimeout(() => {
         clearInterval(interval);
-    }, 5 * 60 * 1000);
+    }, 5 * 60 * 1000);*/
 });
 </script>
 {% endblock %}

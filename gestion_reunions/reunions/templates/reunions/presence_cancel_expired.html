@@ -18,7 +18,7 @@
                     <div class="alert alert-warning border-0 mb-4">
                         <h5 class="alert-heading">Trop tard pour annuler</h5>
                         <p class="mb-0">
-                            Le délai de 5 minutes pour annuler votre présence est dépassé.
+                            Le délai de 1 heure pour annuler votre présence est dépassé.
                             Cette mesure de sécurité empêche les annulations accidentelles tardives.
                         </p>
                     </div>
@@ -61,7 +61,7 @@
                 <div class="card-footer bg-light text-center">
                     <small class="text-muted">
                         <i class="fas fa-shield-alt me-1"></i>
-                        Système de sécurité - Délai d'annulation : 5 minutes après confirmation
+                        Système de sécurité - Délai d'annulation : 1 heure après confirmation
                     </small>
                 </div>
             </div>
@@ -213,7 +213,7 @@
                 <div class="card-footer bg-light text-center">
                     <small class="text-muted">
                         <i class="fas fa-shield-alt me-1"></i>
-                        Lien d'annulation sécurisé - Valable 5 minutes après confirmation
+                        Lien d'annulation sécurisé - Valable 1 heure après confirmation
                     </small>
                 </div>
             </div>
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if presence_request.confirmed_at %}
     // Calcul du temps restant pour annuler
     const confirmedAt = new Date('{{ presence_request.confirmed_at|date:"c" }}');
-    const fiveMinutes = 5 * 60 * 1000; // 5 minutes en millisecondes
+    const oneHour= 60 * 60 * 1000; // 60 minutes en millisecondes
     const expiryTime = new Date(confirmedAt.getTime() + fiveMinutes);
     
     function updateCountdown() {
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alertDiv.className = 'alert alert-danger mt-3';
             alertDiv.innerHTML = 
                 '<i class="fas fa-hourglass-end me-2"></i>' +
-                '<strong>Délai expiré :</strong> La période d\'annulation de 5 minutes est terminée.';
+                '<strong>Délai expiré :</strong> La période d\'annulation de 1 heure est terminée.';
             document.getElementById('cancellationForm').prepend(alertDiv);
             
             return;

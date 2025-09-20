@@ -1155,7 +1155,7 @@ Votre inscription à la réunion « {presence_request.reunion.titre} » a bien �
 📅 Date : {presence_request.reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
 📍 Lieu : {presence_request.reunion.lieu}
 
-⚠️ IMPORTANT : Si cette inscription n'est pas de votre fait, vous avez 5 minutes pour l'annuler en cliquant sur le lien ci-dessous :
+⚠️ IMPORTANT : Si cette inscription n'est pas de votre fait, vous avez 1 heure pour l'annuler en cliquant sur le lien ci-dessous :
 
 {cancellation_url}
 
@@ -1238,7 +1238,7 @@ def presence_cancel_by_token(request, cancel_token):
         # Vérifier que la fenêtre d'annulation est encore ouverte (5 minutes)
         if presence_request.confirmed_at:
             time_since_confirmation = timezone.now() - presence_request.confirmed_at
-            if time_since_confirmation > timedelta(minutes=5):
+            if time_since_confirmation > timedelta(minutes=60):
                 messages.error(request, "La période d'annulation a expiré.")
                 return render(request, 'reunions/cancellation_expired.html', {
                     'presence_request': presence_request
@@ -1384,7 +1384,6 @@ Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
         })
 
 
-
 def presence_cancel(request, token):
     """Vue pour annuler automatiquement une demande de présence"""
     
@@ -1410,9 +1409,9 @@ def presence_cancel(request, token):
         time_since_confirmation = timezone.now() - presence_request.confirmed_at
         print(f"⏰ Temps écoulé depuis confirmation: {time_since_confirmation}")
         
-        if time_since_confirmation > timedelta(minutes=5):
+        if time_since_confirmation > timedelta(minutes=60):
             print(f"⏰ Délai d'annulation expiré")
-            messages.error(request, "La période d'annulation a expiré (5 minutes maximum).")
+            messages.error(request, "La période d'annulation a expiré (50 minutes maximum).")
             return render(request, 'reunions/presence_cancel_expired.html', {
                 'presence_request': presence_request
             })

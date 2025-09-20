@@ -3,7 +3,7 @@ from django.utils import timezone
 from reunions.models import PresenceRequest
 
 class Command(BaseCommand):
-    help = 'Confirme automatiquement les demandes de présence après 5 minutes'
+    help = 'Confirme automatiquement les demandes de présence après 1 heure'
 
     def add_arguments(self, parser):
         parser.add_argument(
