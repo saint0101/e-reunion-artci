@@ -1531,11 +1531,12 @@ def send_cancellation_notification_to_secretary(presence_request, reason=None,
 NOTIFICATION D'ANNULATION DE PRÉSENCE
 =====================================
 
-Bonjour,
 
-Une annulation de présence vient d'avoir lieu pour la réunion "{reunion.titre}".
+Bonjour, 
 
-PARTICIPANT QUI S'EST DÉSISTÉ :
+Un participant a annulé son inscription à une réunion.
+
+PARTICIPANT CONCERNÉ :
 ==============================
 • Nom : {participant_name}
 • Email : {participant_email}  
@@ -1550,7 +1551,7 @@ PARTICIPANT QUI S'EST DÉSISTÉ :
 
     text_content += f"""
 
-RÉUNION CONCERNÉE :
+RÉUNION CONCERNÉE:
 ==================
 • Titre : {reunion.titre}
 • Date : {reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}
