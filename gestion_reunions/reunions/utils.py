@@ -31,15 +31,6 @@ def generate_presence_report(reunion, format_type='pdf'):
     return None
 
 
-import io
-from datetime import datetime
-from django.http import HttpResponse
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.units import inch
-
 def generate_pdf_report(reunion, presences):
     """Génère un rapport PDF de présence ajusté à la page avec retour à la ligne automatique."""
 
