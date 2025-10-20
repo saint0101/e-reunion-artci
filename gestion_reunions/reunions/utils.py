@@ -33,6 +33,7 @@ def generate_presence_report(reunion, format_type='pdf'):
 
 def generate_pdf_report(reunion, presences):
     """Génère un rapport PDF de présence avec bordures visibles et colonnes ajustées"""
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -79,50 +80,57 @@ def generate_pdf_report(reunion, presences):
     # --- TABLEAU DES PARTICIPANTS ---
     if presences:
         headers = ['N°', 'Nom', 'Prénom', 'Structure/Organisation', 'Fonction', 'Contact', 'Email']
-        data = [headers]
 
+        # Style pour texte dans les cellules (retour à la ligne)
+        cell_style = ParagraphStyle(
+            name='CellStyle',
+            fontName='Helvetica',
+            fontSize=8,
+            leading=10,
+        )
+
+        # Préparer les données avec Paragraph pour retour à la ligne
+        data = [headers]
         for i, presence in enumerate(presences, 1):
             data.append([
                 str(i),
-                presence.nom or '—',
-                presence.prenom or '—',
-                presence.organisation or '—',
-                presence.fonction or '—',
-                presence.contact or '—',
-                presence.email or '—',
+                Paragraph(presence.nom or '—', cell_style),
+                Paragraph(presence.prenom or '—', cell_style),
+                Paragraph(presence.organisation or '—', cell_style),
+                Paragraph(presence.fonction or '—', cell_style),
+                Paragraph(presence.contact or '—', cell_style),
+                Paragraph(presence.email or '—', cell_style),
             ])
 
-        # Auto-fit dynamique selon la longueur du texte
+        # Largeur des colonnes auto-ajustée selon contenu
         max_widths = []
         for col in range(len(headers)):
-            max_len = max(len(str(row[col])) for row in data)
+            max_len = max(
+                len(str(row[col].text if isinstance(row[col], Paragraph) else row[col]))
+                for row in data
+            )
             max_widths.append(max(0.6 * inch, min(2.2 * inch, max_len * 0.09 * inch)))
 
         table = Table(data, repeatRows=1, colWidths=max_widths)
 
-        # Styles améliorés (bordures visibles)
+        # Style du tableau participants
         table.setStyle(TableStyle([
-            # En-têtes
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6B35')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
 
-            # Corps
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
 
-            # Bordures visibles et nettes
+            # Bordures visibles
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
 
             # Lignes alternées
             ('ROWBACKGROUNDS', (0, 1), (-1, -1),
              [colors.white, colors.HexColor('#F8F9FA')]),
-
-            # Texte long : retour à la ligne automatique
-            ('WORDWRAP', (0, 0), (-1, -1), True),
         ]))
 
         story.append(table)
@@ -141,11 +149,13 @@ def generate_pdf_report(reunion, presences):
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        # Supprimer toutes les bordures
+        ('BOX', (0, 0), (-1, -1), 0, colors.white),
+        ('INNERGRID', (0, 0), (-1, -1), 0, colors.white),
     ]))
     story.append(signature_table)
 
-    # --- EXPORT ---
+    # --- EXPORT PDF ---
     doc.build(story)
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
