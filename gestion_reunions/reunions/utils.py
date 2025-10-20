@@ -31,16 +31,25 @@ def generate_presence_report(reunion, format_type='pdf'):
     return None
 
 
+import io
+from datetime import datetime
+from django.http import HttpResponse
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.units import inch
+
 def generate_pdf_report(reunion, presences):
-    """Génère un rapport PDF de présence avec bordures visibles et colonnes ajustées"""
+    """Génère un rapport PDF de présence ajusté à la page avec retour à la ligne automatique."""
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
         topMargin=0.8 * inch,
-        leftMargin=0.5 * inch,
-        rightMargin=0.5 * inch
+        leftMargin=0.4 * inch,
+        rightMargin=0.4 * inch
     )
 
     styles = getSampleStyleSheet()
@@ -81,7 +90,7 @@ def generate_pdf_report(reunion, presences):
     if presences:
         headers = ['N°', 'Nom', 'Prénom', 'Structure/Organisation', 'Fonction', 'Contact', 'Email']
 
-        # Style pour texte dans les cellules (retour à la ligne)
+        # Style pour les cellules
         cell_style = ParagraphStyle(
             name='CellStyle',
             fontName='Helvetica',
@@ -89,11 +98,11 @@ def generate_pdf_report(reunion, presences):
             leading=10,
         )
 
-        # Préparer les données avec Paragraph pour retour à la ligne
+        # Construire les données avec Paragraph (pour retour à la ligne)
         data = [headers]
         for i, presence in enumerate(presences, 1):
             data.append([
-                str(i),
+                Paragraph(str(i), cell_style),
                 Paragraph(presence.nom or '—', cell_style),
                 Paragraph(presence.prenom or '—', cell_style),
                 Paragraph(presence.organisation or '—', cell_style),
@@ -102,31 +111,43 @@ def generate_pdf_report(reunion, presences):
                 Paragraph(presence.email or '—', cell_style),
             ])
 
-        # Largeur des colonnes auto-ajustée selon contenu
-        max_widths = []
-        for col in range(len(headers)):
-            max_len = max(
-                len(str(row[col].text if isinstance(row[col], Paragraph) else row[col]))
-                for row in data
-            )
-            max_widths.append(max(0.6 * inch, min(2.2 * inch, max_len * 0.09 * inch)))
+        # Largeur totale disponible sur la page (A4 = 8.27 in - marges)
+        total_width = 8.27 * inch - (0.8 * inch)
+        # Répartition des colonnes (proportion selon importance du contenu)
+        col_widths = [
+            0.4 * inch,  # N°
+            1.5 * inch,  # Nom
+            1.5 * inch,  # Prénom
+            1.6 * inch,  # Structure/Organisation
+            1.0 * inch,  # Fonction
+            1.0 * inch,  # Contact
+            1.7 * inch,  # Email
+        ]
 
-        table = Table(data, repeatRows=1, colWidths=max_widths)
+        # Ajustement pour que le total tienne sur la page
+        scale = total_width / sum(col_widths)
+        col_widths = [w * scale for w in col_widths]
 
-        # Style du tableau participants
+        # Création du tableau
+        table = Table(data, repeatRows=1, colWidths=col_widths)
+
+        # Style visuel
         table.setStyle(TableStyle([
+            # En-têtes
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6B35')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
 
+            # Corps
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
 
             # Bordures visibles
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
 
             # Lignes alternées
             ('ROWBACKGROUNDS', (0, 1), (-1, -1),
