@@ -30,12 +30,12 @@ def generate_presence_report(reunion, format_type='pdf'):
     
     return None
 
+
 def generate_pdf_report(reunion, presences):
-    """Génère un rapport PDF de présence avec nouveaux champs"""
+    """Génère un rapport PDF de présence avec ajustement automatique des colonnes"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.8*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
     
-    # Styles
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -43,10 +43,9 @@ def generate_pdf_report(reunion, presences):
         fontSize=18,
         spaceAfter=30,
         textColor=colors.HexColor('#FF6B35'),
-        alignment=1  # Center
+        alignment=1  # Centré
     )
     
-    # Contenu
     story = []
     
     # Titre
@@ -56,10 +55,10 @@ def generate_pdf_report(reunion, presences):
     
     # Informations de la réunion
     info_data = [
-        ['Date:', reunion.date_debut.strftime('%d/%m/%Y à %H:%M')],
-        ['Lieu:', reunion.lieu],
-        ['Organisateur:', f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"],
-        ['Nombre de participants:', str(presences.count())],
+        ['Date :', reunion.date_debut.strftime('%d/%m/%Y à %H:%M')],
+        ['Lieu :', reunion.lieu],
+        ['Organisateur :', f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"],
+        ['Nombre de participants :', str(presences.count())],
     ]
     
     info_table = Table(info_data, colWidths=[2*inch, 4*inch])
@@ -68,19 +67,16 @@ def generate_pdf_report(reunion, presences):
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
     
     story.append(info_table)
     story.append(Spacer(1, 24))
     
-    # Tableau des participants avec nouveaux champs
+    # Tableau des participants
     if presences:
-        # En-têtes dans l'ordre demandé : N°, Nom, Prénom, Structure, Fonction, Contact, Email
-        data = [['N°', 'Nom', 'Prénom', 'Structure/Organisation', 'Fonction', 'Contact', 'Email']]
-        
-        # Données
+        headers = ['N°', 'Nom', 'Prénom', 'Structure/Organisation', 'Fonction', 'Contact', 'Email']
+        data = [headers]
+
         for i, presence in enumerate(presences, 1):
             data.append([
                 str(i),
@@ -89,43 +85,43 @@ def generate_pdf_report(reunion, presences):
                 presence.organisation or '—',
                 presence.fonction or '—',
                 presence.contact or '—',
-                presence.email,
+                presence.email or '—',
             ])
         
-        # Colonnes adaptées pour 7 colonnes
-        table = Table(data, repeatRows=1, colWidths=[0.5*inch, 1.2*inch, 1.2*inch, 1.5*inch, 1.3*inch, 1*inch, 1.8*inch])
+        # ✅ AUTO-FIT dynamique selon la longueur maximale de chaque colonne
+        max_widths = []
+        for col in range(len(headers)):
+            max_len = max(len(str(row[col])) for row in data)
+            # Conversion du nombre de caractères → pouces (0.09 est un facteur d’ajustement empirique)
+            max_widths.append(max(0.5*inch, min(2.2*inch, max_len * 0.09 * inch)))
+        
+        table = Table(data, repeatRows=1, colWidths=max_widths)
         table.setStyle(TableStyle([
-            # En-tête
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6B35')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
-            
-            # Corps du tableau
+
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # Numérotation centrée
-            
-            # Alternance de couleurs
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8F9FA')]),
-            
-            # Ajustement du texte pour éviter le débordement
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+             [colors.white, colors.HexColor('#F8F9FA')]),
+
             ('WORDWRAP', (0, 0), (-1, -1), True),
         ]))
-        
         story.append(table)
     else:
-        no_participants = Paragraph("Aucun participant confirmé", styles['Normal'])
-        story.append(no_participants)
+        story.append(Paragraph("Aucun participant confirmé.", styles['Normal']))
     
-    # Signature
     story.append(Spacer(1, 48))
     signature_data = [
-        ['Généré le:', datetime.now().strftime('%d/%m/%Y à %H:%M')],
-        ['Par:', 'QR Meeting System'],
-        ['Signature organisateur:', ''],
+        ['Généré le :', datetime.now().strftime('%d/%m/%Y à %H:%M')],
+        ['Par :', 'QR Meeting System'],
+        ['Signature organisateur :', ''],
     ]
     
     signature_table = Table(signature_data, colWidths=[2*inch, 4*inch])
@@ -133,104 +129,123 @@ def generate_pdf_report(reunion, presences):
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
-    
     story.append(signature_table)
     
-    # Génération du PDF
     doc.build(story)
     buffer.seek(0)
     
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="presence_{reunion.titre.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
-    
+    response['Content-Disposition'] = (
+        f'attachment; filename="presence_{reunion.titre.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"'
+    )
     return response
 
+
 def generate_excel_report(reunion, presences):
-    """Génère un rapport Excel de présence avec nouveaux champs"""
+    """Génère un rapport Excel de présence avec ajustement automatique des colonnes"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    import io
+    from datetime import datetime
+    from django.http import HttpResponse
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Liste de Présence"
-    
+
     # Styles
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="FF6B35", end_color="FF6B35", fill_type="solid")
     center_alignment = Alignment(horizontal="center", vertical="center")
     wrap_alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    
-    # Titre et informations
+
+    # Titre
     ws['A1'] = f"Liste de Présence - {reunion.titre}"
     ws['A1'].font = Font(bold=True, size=16, color="FF6B35")
     ws.merge_cells('A1:G1')
-    
-    ws['A3'] = "Date:"
-    ws['B3'] = reunion.date_debut.strftime('%d/%m/%Y à %H:%M')
-    ws['A4'] = "Lieu:"
-    ws['B4'] = reunion.lieu
-    ws['A5'] = "Organisateur:"
-    ws['B5'] = f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"
-    ws['A6'] = "Nombre de participants:"
-    ws['B6'] = presences.count()
-    
-    # Mettre en gras les labels
+
+    # Informations de la réunion
+    ws['A3'], ws['B3'] = "Date:", reunion.date_debut.strftime('%d/%m/%Y à %H:%M')
+    ws['A4'], ws['B4'] = "Lieu:", reunion.lieu
+    ws['A5'], ws['B5'] = "Organisateur:", f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"
+    ws['A6'], ws['B6'] = "Nombre de participants:", presences.count()
+
+    # Mise en gras des labels
     for row in range(3, 7):
         ws[f'A{row}'].font = Font(bold=True)
-    
-    # En-têtes du tableau dans l'ordre demandé
+
+    # En-têtes du tableau
     headers = ['N°', 'Nom', 'Prénom', 'Structure/Organisation', 'Fonction', 'Contact', 'Email']
+    ws.append(headers)
+
+    header_row = 8
     for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=8, column=col, value=header)
+        cell = ws.cell(row=header_row, column=col)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = center_alignment
-    
+
     # Données
-    for row, presence in enumerate(presences, 9):
-        ws.cell(row=row, column=1, value=row-8).alignment = center_alignment
-        ws.cell(row=row, column=2, value=presence.nom or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=3, value=presence.prenom or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=4, value=presence.organisation or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=5, value=presence.fonction or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=6, value=presence.contact or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=7, value=presence.email).alignment = wrap_alignment
-    
-    # Ajustement automatique des colonnes avec largeurs optimisées
-    column_widths = [8, 20, 20, 25, 20, 15, 30]  # Largeurs personnalisées
-    for i, width in enumerate(column_widths, 1):
-        ws.column_dimensions[chr(64 + i)].width = width
-    
-    # Ajuster la hauteur des lignes pour le contenu
-    for row in range(9, 9 + presences.count()):
-        ws.row_dimensions[row].height = 20
-    
-    # Ajouter des bordures
-    from openpyxl.styles import Border, Side
+    for i, presence in enumerate(presences, start=1):
+        ws.append([
+            i,
+            presence.nom or '—',
+            presence.prenom or '—',
+            presence.organisation or '—',
+            presence.fonction or '—',
+            presence.contact or '—',
+            presence.email or '—'
+        ])
+
+    # Bordures fines
     thin_border = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
         top=Side(style='thin'),
         bottom=Side(style='thin')
     )
-    
-    for row in range(8, 9 + presences.count()):
-        for col in range(1, 8):
-            ws.cell(row=row, column=col).border = thin_border
-    
-    # Sauvegarde
+
+    for row in ws.iter_rows(min_row=header_row, max_row=ws.max_row, min_col=1, max_col=7):
+        for cell in row:
+            cell.border = thin_border
+            if cell.row > header_row:  # données
+                cell.alignment = wrap_alignment
+
+    # ✅ Ajustement automatique des colonnes selon le contenu
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter  # Lettre de la colonne (A, B, C, etc.)
+        for cell in col:
+            try:
+                if cell.value:
+                    # Mesure la longueur du texte
+                    length = len(str(cell.value))
+                    if length > max_length:
+                        max_length = length
+            except:
+                pass
+        # Ajuste la largeur : ajoute une marge
+        adjusted_width = (max_length + 3)
+        ws.column_dimensions[column].width = adjusted_width
+
+    # Ajuster la hauteur des lignes pour le texte long
+    for row in ws.iter_rows(min_row=header_row + 1, max_row=ws.max_row):
+        ws.row_dimensions[row[0].row].height = 18
+
+    # Sauvegarde dans un buffer mémoire
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    
+
     response = HttpResponse(
         buffer.getvalue(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="presence_{reunion.titre.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
-    
+    response['Content-Disposition'] = f'attachment; filename="presence_{reunion.titre.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"'
+
     return response
+
 
 def generate_word_report(reunion, presences):
     """Génère un rapport Word de présence avec nouveaux champs"""
@@ -349,6 +364,7 @@ def generate_word_report(reunion, presences):
     response['Content-Disposition'] = f'attachment; filename="presence_{reunion.titre.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M")}.docx"'
     
     return response
+
 
 def send_compte_rendu_email(compte_rendu):
     """Envoie le compte-rendu aux participants confirmés"""
