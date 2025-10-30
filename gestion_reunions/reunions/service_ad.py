@@ -12,7 +12,7 @@ class ActiveDirectoryService:
     def __init__(self):
         self.server = Server(
             # settings.AD_SERVER,
-            'ldap://172.16.0.4'
+            'ldap://172.16.0.4',
             # port=settings.AD_PORT,
             port=389,
             get_info=ALL
