@@ -17,16 +17,22 @@ from email.utils import formataddr
 from datetime import timedelta
 import uuid
 
-import logging
+from .service_ad import ActiveDirectoryService
+import logging, os
 from dotenv import load_dotenv
-#from reunions.service_ad import ActiveDirectoryService
-from gestion_reunions.reunions.service_ad import ActiveDirectoryService
-
-#from .service_ad import ActiveDirectoryService
+from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
-load_dotenv()
+
+
+
+# Charger le fichier .env depuis la racine du projet
+BASE_DIR = Path(__file__).resolve().parent.parent  # ← dossier gestion_reunions/
+dotenv_path = BASE_DIR / ".env"
+load_dotenv(dotenv_path)
+logger.info(f"✅ Chargement du .env depuis : {dotenv_path}")
+
 
 # Dashboard Views
 @login_required
@@ -1685,7 +1691,6 @@ def presence_form(request, uuid):
 
         # Cas email ARTCI
         if is_artci_email(email):
-
             try:
                 service_ad = ActiveDirectoryService()
                 user_info = service_ad.get_user_info(email)
