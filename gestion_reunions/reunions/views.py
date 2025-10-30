@@ -1657,17 +1657,7 @@ Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
         })
     
 
-from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib import messages
-from django.utils import timezone
-import logging
 
-from .models import Reunion, PresenceRequest
-from .service_ad import ActiveDirectoryService
-from .emails import send_cancellation_email
-from .utils import is_artci_email  # Assure-toi que cette fonction existe
-
-logger = logging.getLogger(__name__)
 
 def presence_form(request, uuid):
     """
