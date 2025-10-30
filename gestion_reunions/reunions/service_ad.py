@@ -4,6 +4,7 @@ from ldap3 import Server, Connection, ALL, SUBTREE
 from django.core.cache import cache
 from django.conf import settings
 from dotenv import load_dotenv
+from gestion_reunions.settings import AD_BIND_PASSWORD, AD_BIND_DN, AD_SEARCH_BASE, AD_SERVER, AD_USER
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +12,16 @@ class ActiveDirectoryService:
     def __init__(self):
         load_dotenv()  # charger .env
         
-        self.server_address = os.environ.get('AD_SERVER')
-        self.user = os.environ.get('AD_USER')
-        self.password = os.environ.get('AD_PASSWORD')
+        # self.server_address = os.environ.get('AD_SERVER')
+        self.server_address = AD_SERVER
+        self.user = AD_USER
+        self.password = AD_BIND_PASSWORD
+
+        #self.user = os.environ.get('AD_USER')
+        #self.password = os.environ.get('AD_BIND_PASSWORD')
         
         if not all([self.server_address, self.user, self.password]):
-            raise ValueError("AD_SERVER, AD_USER ou AD_PASSWORD manquant dans le .env")
+            raise ValueError("AD_SERVER, AD_USER ou AD_BIND_PASSWORD manquant dans le .env")
         
         self.server = Server(self.server_address, get_info=ALL)
     
@@ -55,15 +60,15 @@ class ActiveDirectoryService:
         try:
             conn = Connection(
                 self.server,
-                user=settings.AD_BIND_DN,
-                password=settings.AD_BIND_PASSWORD,
+                user= AD_BIND_DN,
+                password= AD_BIND_PASSWORD,
                 auto_bind=True
             )
             
             search_filter = f'(&(objectClass=user)(mail={email}))'
             
             conn.search(
-                search_base=settings.AD_SEARCH_BASE,
+                search_base=AD_SEARCH_BASE,
                 search_filter=search_filter,
                 search_scope=SUBTREE,
                 attributes=[
