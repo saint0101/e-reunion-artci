@@ -18,10 +18,14 @@ from datetime import timedelta
 import uuid
 
 import logging
-from .service_ad import ActiveDirectoryService
+from dotenv import load_dotenv
+from reunions.service_ad import ActiveDirectoryService
+
+#from .service_ad import ActiveDirectoryService
 
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 # Dashboard Views
 @login_required
@@ -1680,7 +1684,7 @@ def presence_form(request, uuid):
 
         # Cas email ARTCI
         if is_artci_email(email):
-            
+
             try:
                 service_ad = ActiveDirectoryService()
                 user_info = service_ad.get_user_info(email)

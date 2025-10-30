@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 from gestion_reunions.settings import AD_BIND_PASSWORD, AD_BIND_DN, AD_SEARCH_BASE, AD_SERVER, AD_USER
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 class ActiveDirectoryService:
     def __init__(self):
-        load_dotenv()  # charger .env
         
         # self.server_address = os.environ.get('AD_SERVER')
         self.server_address = AD_SERVER
