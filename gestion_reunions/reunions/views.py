@@ -1681,9 +1681,8 @@ def presence_form(request, uuid):
         if is_artci_email(email):
             try:
                 # Récupération des informations depuis Active Directory
-                from service_ad import ActiveDirectoryService
+                from .service_ad import ActiveDirectoryService
 
-                
                 service_ad = ActiveDirectoryService()
                 user_info = service_ad.get_user_info(email)
                 
