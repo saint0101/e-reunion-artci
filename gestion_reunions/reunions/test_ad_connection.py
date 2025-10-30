@@ -25,7 +25,7 @@ if user_info:
     print(f"  Prénom: {user_info['prenom']}")
     print(f"  Email: {user_info['email']}")
     print(f"  Département: {user_info['departement']}")
-    print(f"  Fonction: {user_info['poste']}")
-    print(f"  Téléphone: {user_info['telephone']}")
+    print(f"  Fonction: {user_info['fonction']}")
+    print(f"  Téléphone: {user_info['contact']}")
 else:
     print(f"\n✗ Utilisateur non trouvé pour {email_test}")

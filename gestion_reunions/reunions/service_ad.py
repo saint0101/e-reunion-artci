@@ -52,7 +52,7 @@ class ActiveDirectoryService:
             
             user_entry = conn.entries[0]
                         
-            def safe_get_value(entry, attr_name, default=''):
+            def safe_get(entry, attr_name, default=''):
                 try:
                     attr = getattr(entry, attr_name, None)
                     if not attr or not hasattr(attr, 'value'):
