@@ -17,6 +17,10 @@ from email.utils import formataddr
 from datetime import timedelta
 import uuid
 
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 # Dashboard Views
 @login_required
@@ -921,10 +925,10 @@ Ce message est automatique. Merci de ne pas y répondre.
         print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
         return False
     
-# views.py - Vue simplifiée
 
+"""
 def presence_form(request, uuid):
-    """Formulaire de demande de présence - Version simplifiée"""
+    "Formulaire de demande de présence - Version simplifiée"
     reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
     
     if request.method == 'POST':
@@ -993,6 +997,7 @@ def presence_form(request, uuid):
     # Si GET, rediriger vers la page de consentement
     return redirect('presence_qr_redirect', uuid=uuid)
 
+"""
 
 def presence_external_form(request, uuid):
     """Formulaire complet pour les utilisateurs externes"""
@@ -1464,7 +1469,6 @@ def presence_cancel(request, token):
         'participant_name': participant_name
     })
 
-
 # Fonctions utilitaires inchangées
 def get_participant_name(presence_request):
     """Extraction du nom du participant avec fallbacks"""
@@ -1585,9 +1589,8 @@ Système QR Meeting
         print(f"❌ Erreur envoi notification: {e}")
         return False
 
-
-
 def debug_secretary_notification(request):
+
     """Vue de debug pour tester l'envoi au secrétaire"""
     if not settings.DEBUG:
         return JsonResponse({'error': 'Debug mode only'})
@@ -1651,3 +1654,87 @@ Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
                 'host': getattr(settings, 'EMAIL_HOST', 'Non défini'),
             }
         })
+    
+
+
+def presence_form(request, uuid):
+    """Formulaire de demande de présence avec intégration Active Directory"""
+    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').lower().strip()
+        
+        if not email:
+            messages.error(request, "Adresse email requise.")
+            return redirect('presence_qr_redirect', uuid=uuid)
+        
+        # Vérifier si déjà enregistré
+        existing_request = PresenceRequest.objects.filter(
+            reunion=reunion, email=email
+        ).first()
+        
+        if existing_request:
+            messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
+            return redirect('presence_status', token=existing_request.validation_token)
+        
+        # Traitement différencié selon le domaine email
+        if is_artci_email(email):
+            try:
+                # Récupération des informations depuis Active Directory
+                from .ad_service import ActiveDirectoryService
+                
+                ad_service = ActiveDirectoryService()
+                user_info = ad_service.get_user_info(email)
+                
+                if user_info:
+                    # Création de la présence avec les données AD uniquement
+                    presence_request = PresenceRequest.objects.create(
+                        reunion=reunion,
+                        email=user_info['email'],
+                        prenom=user_info['prenom'] or '',
+                        nom=user_info['nom'] or '',
+                        organisation=user_info['entreprise'] or 'ARTCI',
+                        telephone=user_info['telephone'] or '',
+                        poste=user_info['poste'] or '',
+                        departement=user_info['departement'] or '',
+                        matricule=user_info['matricule'] or '',
+                        consent_given=True,
+                        status='confirmed',
+                        confirmed_at=timezone.now()
+                    )
+                    
+                    logger.info(f"Présence créée avec succès pour {email} depuis AD")
+                    
+                    # Envoyer email d'annulation avec délai de 5 minutes
+                    send_cancellation_email(presence_request)
+                    
+                    return render(request, 'reunions/presence_confirmed_artci.html', {
+                        'reunion': reunion,
+                        'presence_request': presence_request,
+                        'is_artci': True,
+                        'from_ad': True
+                    })
+                    
+                else:
+                    # Utilisateur non trouvé dans Active Directory
+                    logger.error(f"Utilisateur {email} non trouvé dans Active Directory")
+                    messages.error(request, 
+                        "Impossible de récupérer vos informations depuis Active Directory. "
+                        "Veuillez vérifier votre adresse email ou contacter l'administrateur système.")
+                    return redirect('presence_qr_redirect', uuid=uuid)
+                
+            except Exception as e:
+                logger.error(f"Erreur lors de la connexion à Active Directory pour {email}: {str(e)}")
+                messages.error(request, 
+                    "Une erreur est survenue lors de la connexion à Active Directory. "
+                    "Veuillez réessayer ultérieurement ou contacter le support technique.")
+                return redirect('presence_qr_redirect', uuid=uuid)
+        
+        else:
+            # Email externe : redirection vers formulaire complet
+            request.session['temp_email'] = email
+            request.session['reunion_uuid'] = str(uuid)
+            return redirect('presence_external_form', uuid=uuid)
+    
+    # Si GET, rediriger vers la page de consentement
+    return redirect('presence_qr_redirect', uuid=uuid)
