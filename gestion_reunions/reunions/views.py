@@ -1711,9 +1711,9 @@ def presence_form(request, uuid):
                     organisation=user_info.get('organisation', 'ARTCI'),
                     fonction=user_info.get('fonction', ''),
                     contact=user_info.get('contact', ''),
-                    poste=user_info.get('poste', ''),
-                    departement=user_info.get('departement', ''),
-                    matricule=user_info.get('matricule', ''),
+                    # poste=user_info.get('poste', ''),
+                    # departement=user_info.get('departement', ''),
+                    # matricule=user_info.get('matricule', ''),
                     consent_given=True,
                     status='confirmed',
                     confirmed_at=timezone.now()
