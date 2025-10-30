@@ -53,7 +53,10 @@ RUN mkdir -p /app/staticfiles \
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-RUN mkdir -p /app/gestion_reunions/reunions/logs
+# Créer le dossier logs et donner les droits
+RUN mkdir -p /app/gestion_reunions/reunions/logs \
+    && chown -R appuser:appuser /app/gestion_reunions/reunions/logs
+
 
 # Passer à l'utilisateur non-root
 USER appuser
