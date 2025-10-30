@@ -61,20 +61,32 @@ class ActiveDirectoryService:
             if conn.entries and len(conn.entries) > 0:
                 user_entry = conn.entries[0]
                 
+                # Fonction helper pour extraire les valeurs de manière sécurisée
+                def safe_get_value(entry, attr_name, default=''):
+                    try:
+                        attr = getattr(entry, attr_name, None)
+                        if attr and hasattr(attr, 'value') and attr.value is not None:
+                            value = str(attr.value)
+                            return value.strip() if value else default
+                        return default
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'extraction de {attr_name}: {str(e)}")
+                        return default
+                
                 # Extraction et formatage des données
                 user_info = {
-                    'compte': str(user_entry.sAMAccountName.value) if user_entry.sAMAccountName else None,
-                    'nom_complet': str(user_entry.cn.value) if user_entry.cn else None,
-                    'prenom': str(user_entry.givenName.value) if user_entry.givenName else '',
-                    'nom': str(user_entry.sn.value) if user_entry.sn else '',
-                    'email': str(user_entry.mail.value) if user_entry.mail else email,
-                    'upn': str(user_entry.userPrincipalName.value) if user_entry.userPrincipalName else None,
-                    'telephone': str(user_entry.telephoneNumber.value) if user_entry.telephoneNumber else '',
-                    'departement': str(user_entry.department.value) if user_entry.department else '',
-                    'poste': str(user_entry.title.value) if user_entry.title else '',
-                    'entreprise': str(user_entry.company.value) if user_entry.company else 'ARTCI',
-                    'bureau': str(user_entry.physicalDeliveryOfficeName.value) if user_entry.physicalDeliveryOfficeName else '',
-                    'dn': str(user_entry.distinguishedName.value) if user_entry.distinguishedName else None,
+                    'compte': safe_get_value(user_entry, 'sAMAccountName', None),
+                    'nom_complet': safe_get_value(user_entry, 'cn', None),
+                    'prenom': safe_get_value(user_entry, 'givenName', ''),
+                    'nom': safe_get_value(user_entry, 'sn', ''),
+                    'email': safe_get_value(user_entry, 'mail', email),
+                    'upn': safe_get_value(user_entry, 'userPrincipalName', None),
+                    'telephone': safe_get_value(user_entry, 'telephoneNumber', ''),
+                    'departement': safe_get_value(user_entry, 'department', ''),
+                    'poste': safe_get_value(user_entry, 'title', ''),
+                    'entreprise': safe_get_value(user_entry, 'company', 'ARTCI'),
+                    'bureau': safe_get_value(user_entry, 'physicalDeliveryOfficeName', ''),
+                    'dn': safe_get_value(user_entry, 'distinguishedName', None),
                     'matricule': None  # ARTCI n'utilise pas employeeID apparemment
                 }
                 
