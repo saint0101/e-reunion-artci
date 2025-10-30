@@ -19,9 +19,9 @@ import uuid
 
 import logging
 from dotenv import load_dotenv
-from reunions.service_ad import ActiveDirectoryService
+#from reunions.service_ad import ActiveDirectoryService
 
-#from .service_ad import ActiveDirectoryService
+from .service_ad import ActiveDirectoryService
 
 
 logger = logging.getLogger(__name__)
