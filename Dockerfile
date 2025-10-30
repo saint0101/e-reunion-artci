@@ -21,6 +21,9 @@ RUN apt-get update \
         gettext \
         curl \
         nano \
+        libldap2-dev \
+        libsasl2-dev \
+        libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Créer un utilisateur non-root avec UID/GID spécifiques
