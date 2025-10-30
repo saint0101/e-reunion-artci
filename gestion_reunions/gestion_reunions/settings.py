@@ -423,9 +423,9 @@ SESSION_CACHE_ALIAS = 'default'
 
 
 # Configuration Active Directory
-AD_SERVER = os.getenv('AD_SERVER')
+AD_SERVER = os.getenv('AD_SERVER', 'ldap://172.16.0.4')
 AD_PORT = int(os.getenv('AD_PORT', 389))
-AD_BIND_DN = os.getenv('AD_BIND_DN')
+AD_BIND_DN = os.getenv('AD_BIND_DN', 'grsa,OU=COMPTE DE SERVICE,OU=DSI,OU=SIEGE,DC=artci,DC=lan')
 AD_BIND_PASSWORD = os.getenv('AD_BIND_PASSWORD')
 AD_SEARCH_BASE = os.getenv('AD_SEARCH_BASE')
 AD_USER_SEARCH_FILTER = os.getenv('AD_USER_SEARCH_FILTER')

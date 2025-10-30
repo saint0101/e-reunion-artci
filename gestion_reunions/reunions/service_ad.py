@@ -2,26 +2,36 @@ from ldap3 import Server, Connection, ALL, SUBTREE
 from django.conf import settings
 from django.core.cache import cache
 import logging
+from dotenv import load_dotenv
+
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 class ActiveDirectoryService:
     def __init__(self):
         self.server = Server(
-            settings.AD_SERVER,
-            port=settings.AD_PORT,
+            # settings.AD_SERVER,
+            'ldap://172.16.0.4'
+            # port=settings.AD_PORT,
+            port=389,
             get_info=ALL
         )
     
-    def get_user_info(self, email):
+    def get_user_info(self, email=None):
         """
         Récupère les informations d'un utilisateur depuis l'AD ARTCI
         """
+        if not email:
+            logger.warning("⚠️ Aucun email fourni à get_user_info()")
+            return None
+
         cache_key = f'ad_user_{email}'
         cached_info = cache.get(cache_key)
         if cached_info:
             logger.info(f"Informations récupérées depuis le cache pour {email}")
             return cached_info
+        
         
         try:
             conn = Connection(
@@ -89,6 +99,7 @@ class ActiveDirectoryService:
             conn.unbind()
             cache.set(cache_key, user_info, 3600)
             logger.info(f"Utilisateur trouvé dans AD: {user_info['nom_complet']} ({email})")
+            print(user_info)
             return user_info
         
         except Exception as e:

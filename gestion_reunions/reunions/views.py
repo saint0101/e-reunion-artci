@@ -1680,6 +1680,7 @@ def presence_form(request, uuid):
 
         # Cas email ARTCI
         if is_artci_email(email):
+            
             try:
                 service_ad = ActiveDirectoryService()
                 user_info = service_ad.get_user_info(email)
