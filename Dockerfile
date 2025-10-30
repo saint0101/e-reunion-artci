@@ -53,6 +53,8 @@ RUN mkdir -p /app/staticfiles \
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+RUN mkdir -p /app/gestion_reunions/reunions/logs
+
 # Passer à l'utilisateur non-root
 USER appuser
 
