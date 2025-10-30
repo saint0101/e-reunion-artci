@@ -1656,7 +1656,6 @@ Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
         })
     
 
-
 def presence_form(request, uuid):
     """Formulaire de demande de présence avec intégration Active Directory"""
     reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
@@ -1682,31 +1681,54 @@ def presence_form(request, uuid):
             try:
                 # Récupération des informations depuis Active Directory
                 from .service_ad import ActiveDirectoryService
-
-                service_ad = ActiveDirectoryService()
-                user_info = service_ad.get_user_info(email)
+                
+                logger.info(f"Tentative de récupération AD pour {email}")
+                
+                ad_service = ActiveDirectoryService()
+                
+                # Test de connexion d'abord
+                success, message = ad_service.test_connection()
+                if not success:
+                    logger.error(f"Échec de connexion AD: {message}")
+                    messages.error(request, 
+                        "Impossible de se connecter à Active Directory. "
+                        "Veuillez réessayer ultérieurement.")
+                    return redirect('presence_qr_redirect', uuid=uuid)
+                
+                # Récupération des informations utilisateur
+                user_info = ad_service.get_user_info(email)
                 
                 if user_info:
-                    # Création de la présence avec les données AD uniquement
+                    logger.info(f"Informations AD récupérées pour {email}: "
+                               f"{user_info['prenom']} {user_info['nom']}")
+                    
+                    # Création de la présence avec les données AD
                     presence_request = PresenceRequest.objects.create(
                         reunion=reunion,
                         email=user_info['email'],
                         prenom=user_info['prenom'] or '',
                         nom=user_info['nom'] or '',
                         organisation=user_info['entreprise'] or 'ARTCI',
-                        telephone=user_info['telephone'] or '',
-                        poste=user_info['poste'] or '',
+                        telephone=user_info['telephone'] or user_info.get('mobile', ''),
+                        poste=user_info['poste'] or user_info.get('description', ''),
                         departement=user_info['departement'] or '',
-                        matricule=user_info['matricule'] or '',
+                        # Ajoutez ces champs si votre modèle les supporte
+                        # bureau=user_info.get('bureau', ''),
+                        # ville=user_info.get('ville', ''),
                         consent_given=True,
                         status='confirmed',
                         confirmed_at=timezone.now()
                     )
                     
-                    logger.info(f"Présence créée avec succès pour {email} depuis AD")
+                    logger.info(f"✓ Présence créée avec succès pour {email} (ID: {presence_request.id})")
                     
                     # Envoyer email d'annulation avec délai de 5 minutes
-                    send_cancellation_email(presence_request)
+                    try:
+                        send_cancellation_email(presence_request)
+                        logger.info(f"Email d'annulation envoyé à {email}")
+                    except Exception as email_error:
+                        logger.warning(f"Erreur lors de l'envoi de l'email: {str(email_error)}")
+                        # Ne pas bloquer l'inscription si l'email échoue
                     
                     return render(request, 'reunions/presence_confirmed_artci.html', {
                         'reunion': reunion,
@@ -1717,21 +1739,30 @@ def presence_form(request, uuid):
                     
                 else:
                     # Utilisateur non trouvé dans Active Directory
-                    logger.error(f"Utilisateur {email} non trouvé dans Active Directory")
+                    logger.error(f"✗ Utilisateur {email} non trouvé dans Active Directory")
                     messages.error(request, 
-                        "Impossible de récupérer vos informations depuis Active Directory. "
-                        "Veuillez vérifier votre adresse email ou contacter l'administrateur système.")
+                        "Votre adresse email n'a pas été trouvée dans l'annuaire ARTCI. "
+                        "Veuillez vérifier votre adresse email ou contacter le service DSI.")
                     return redirect('presence_qr_redirect', uuid=uuid)
                 
-            except Exception as e:
-                logger.error(f"Erreur lors de la connexion à Active Directory pour {email}: {str(e)}")
+            except ImportError as ie:
+                logger.error(f"Erreur d'import du service AD: {str(ie)}")
                 messages.error(request, 
-                    "Une erreur est survenue lors de la connexion à Active Directory. "
-                    "Veuillez réessayer ultérieurement ou contacter le support technique.")
+                    "Erreur de configuration du service Active Directory. "
+                    "Veuillez contacter l'administrateur système.")
+                return redirect('presence_qr_redirect', uuid=uuid)
+                
+            except Exception as e:
+                logger.error(f"Erreur inattendue lors de la connexion AD pour {email}: {str(e)}")
+                logger.exception("Détails de l'erreur:")
+                messages.error(request, 
+                    "Une erreur technique est survenue. "
+                    "Veuillez réessayer dans quelques instants ou contacter le support technique.")
                 return redirect('presence_qr_redirect', uuid=uuid)
         
         else:
             # Email externe : redirection vers formulaire complet
+            logger.info(f"Email externe détecté: {email}")
             request.session['temp_email'] = email
             request.session['reunion_uuid'] = str(uuid)
             return redirect('presence_external_form', uuid=uuid)
