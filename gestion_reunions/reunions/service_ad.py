@@ -1,23 +1,43 @@
-from ldap3 import Server, Connection, ALL, SUBTREE
-from django.conf import settings
-from django.core.cache import cache
 import logging
+import os
+from ldap3 import Server, Connection, ALL, SUBTREE
+from django.core.cache import cache
+from django.conf import settings
 from dotenv import load_dotenv
 
-
 logger = logging.getLogger(__name__)
-load_dotenv()
 
 class ActiveDirectoryService:
     def __init__(self):
-        self.server = Server(
-            # settings.AD_SERVER,
-            'ldap://172.16.0.4',
-            # port=settings.AD_PORT,
-            port=389,
-            get_info=ALL
-        )
+        load_dotenv()  # charger .env
+        
+        self.server_address = os.environ.get('AD_SERVER')
+        self.user = os.environ.get('AD_USER')
+        self.password = os.environ.get('AD_PASSWORD')
+        
+        if not all([self.server_address, self.user, self.password]):
+            raise ValueError("AD_SERVER, AD_USER ou AD_PASSWORD manquant dans le .env")
+        
+        self.server = Server(self.server_address, get_info=ALL)
     
+    def safe_get(self, entry, attr_name, default=''):
+        try:
+            attr = getattr(entry, attr_name, None)
+            if not attr or not hasattr(attr, 'value'):
+                return default
+            
+            value = attr.value
+            if isinstance(value, (list, tuple)):
+                value = value[0] if value else default
+
+            if value is None:
+                return default
+
+            return str(value).strip()
+        except Exception as e:
+            logger.warning(f"Erreur extraction {attr_name}: {e}")
+            return default
+
     def get_user_info(self, email=None):
         """
         Récupère les informations d'un utilisateur depuis l'AD ARTCI
@@ -31,7 +51,6 @@ class ActiveDirectoryService:
         if cached_info:
             logger.info(f"Informations récupérées depuis le cache pour {email}")
             return cached_info
-        
         
         try:
             conn = Connection(
@@ -61,39 +80,21 @@ class ActiveDirectoryService:
                 return None
             
             user_entry = conn.entries[0]
-                        
-            def safe_get(entry, attr_name, default=''):
-                try:
-                    attr = getattr(entry, attr_name, None)
-                    if not attr or not hasattr(attr, 'value'):
-                        return default
-                    
-                    value = attr.value
-                    if isinstance(value, (list, tuple)):
-                        value = value[0] if value else default
-
-                    if value is None:
-                        return default
-
-                    return str(value).strip()
-                except Exception as e:
-                    logger.warning(f"Erreur extraction {attr_name}: {e}")
-                    return default
             
             user_info = {
-                'email': safe_get(user_entry, 'mail', email),
-                'prenom': safe_get(user_entry, 'givenName', ''),
-                'nom': safe_get(user_entry, 'sn', ''),
-                'organisation': safe_get(user_entry, 'company', 'ARTCI'),
-                'fonction': safe_get(user_entry, 'title', ''),
-                'contact': safe_get(user_entry, 'telephoneNumber', '') or safe_get(user_entry, 'mobile', ''),
-                'poste': safe_get(user_entry, 'title', ''),
-                'departement': safe_get(user_entry, 'department', ''),
-                'matricule': safe_get(user_entry, 'employeeID', ''),
-                'bureau': safe_get(user_entry, 'physicalDeliveryOfficeName', ''),
-                'nom_complet': safe_get(user_entry, 'cn', ''),
-                'dn': safe_get(user_entry, 'distinguishedName', ''),
-                'compte': safe_get(user_entry, 'sAMAccountName', '')
+                'email': self.safe_get(user_entry, 'mail', email),
+                'prenom': self.safe_get(user_entry, 'givenName', ''),
+                'nom': self.safe_get(user_entry, 'sn', ''),
+                'organisation': self.safe_get(user_entry, 'company', 'ARTCI'),
+                'fonction': self.safe_get(user_entry, 'title', ''),
+                'contact': self.safe_get(user_entry, 'telephoneNumber', '') or self.safe_get(user_entry, 'mobile', ''),
+                'poste': self.safe_get(user_entry, 'title', ''),
+                'departement': self.safe_get(user_entry, 'department', ''),
+                'matricule': self.safe_get(user_entry, 'employeeID', ''),
+                'bureau': self.safe_get(user_entry, 'physicalDeliveryOfficeName', ''),
+                'nom_complet': self.safe_get(user_entry, 'cn', ''),
+                'dn': self.safe_get(user_entry, 'distinguishedName', ''),
+                'compte': self.safe_get(user_entry, 'sAMAccountName', '')
             }
             
             conn.unbind()
@@ -122,7 +123,7 @@ class ActiveDirectoryService:
                 attributes=['mail']
             )
             if conn.entries and len(conn.entries) > 0:
-                email = safe_get(conn.entries[0], 'mail', None)
+                email = self.safe_get(conn.entries[0], 'mail', None)
                 conn.unbind()
                 if email:
                     return self.get_user_info(email)
