@@ -388,7 +388,7 @@ LOGGING = {
 """
 # REDIS CONFIGURATION
 
-"""
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -398,7 +398,7 @@ CACHES = {
         }
     }
 }
-"""
+
 
 
 # Configuration Celery pour les tâches périodiques
