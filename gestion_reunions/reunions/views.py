@@ -1681,10 +1681,11 @@ def presence_form(request, uuid):
         if is_artci_email(email):
             try:
                 # Récupération des informations depuis Active Directory
-                from .ad_service import ActiveDirectoryService
+                from service_ad import ActiveDirectoryService
+
                 
-                ad_service = ActiveDirectoryService()
-                user_info = ad_service.get_user_info(email)
+                service_ad = ActiveDirectoryService()
+                user_info = service_ad.get_user_info(email)
                 
                 if user_info:
                     # Création de la présence avec les données AD uniquement
