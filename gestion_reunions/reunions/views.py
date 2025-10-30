@@ -1657,177 +1657,89 @@ Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
         })
     
 
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.utils import timezone
+import logging
+
+from .models import Reunion, PresenceRequest
+from .service_ad import ActiveDirectoryService
+from .emails import send_cancellation_email
+from .utils import is_artci_email  # Assure-toi que cette fonction existe
+
+logger = logging.getLogger(__name__)
 
 def presence_form(request, uuid):
-    """Formulaire de demande de présence avec intégration Active Directory"""
+    """
+    Formulaire de demande de présence avec intégration Active Directory.
+    """
     reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
 
-    def ad_get(user_info, attr, default=''):
-        """Récupère un attribut depuis AD et renvoie une chaîne vide si None"""
-        value = user_info.get(attr)
-        if value is None:
-            return default
-        return str(value).strip()
-
     if request.method == 'POST':
-        email = request.POST.get('email', '')
-        if email:
-            email = email.lower().strip()
-        else:
-            messages.error(request, "Adresse email requise.")
-            return redirect('presence_qr_redirect', uuid=uuid)
-
-        # Vérifier si déjà enregistré
-        existing_request = PresenceRequest.objects.filter(
-            reunion=reunion, email=email
-        ).first()
-
-        if existing_request:
-            messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
-            return redirect('presence_status', token=existing_request.validation_token)
-
-        # Traitement différencié selon le domaine email
-        if email.endswith('@artci.ci'):
-            try:
-                # Récupération des informations depuis Active Directory
-                from .service_ad import ActiveDirectoryService
-                service_ad = ActiveDirectoryService()
-                user_info = service_ad.get_user_info(email)
-
-                if user_info:
-                    # Création sécurisée de la présence avec données AD
-                    presence_request = PresenceRequest.objects.create(
-                        reunion=reunion,
-                        email=ad_get(user_info, 'mail', ad_get(user_info, 'userPrincipalName', email)),
-                        prenom=ad_get(user_info, 'givenName'),
-                        nom=ad_get(user_info, 'sn'),
-                        organisation=ad_get(user_info, 'company', 'ARTCI'),
-                        fonction=ad_get(user_info, 'title'),
-                        contact=ad_get(user_info, 'telephoneNumber'),
-                        consent_given=True,
-                        status='confirmed',
-                        confirmed_at=timezone.now(),
-                        auto_confirm_at=timezone.now() + timezone.timedelta(minutes=5)
-                    )
-
-                    logger.info(f"Présence créée avec succès pour {email} depuis AD")
-
-                    # Envoyer email d'annulation avec délai de 5 minutes
-                    send_cancellation_email(presence_request)
-
-                    return render(request, 'reunions/presence_confirmed_artci.html', {
-                        'reunion': reunion,
-                        'presence_request': presence_request,
-                        'is_artci': True,
-                        'from_ad': True
-                    })
-                else:
-                    # Utilisateur non trouvé dans AD
-                    logger.error(f"Utilisateur {email} non trouvé dans Active Directory")
-                    messages.error(request,
-                        "Impossible de récupérer vos informations depuis Active Directory. "
-                        "Veuillez vérifier votre adresse email ou contacter l'administrateur système.")
-                    return redirect('presence_qr_redirect', uuid=uuid)
-
-            except Exception as e:
-                logger.error(f"Erreur lors de la connexion à Active Directory pour {email}: {str(e)}")
-                messages.error(request,
-                    "Une erreur est survenue lors de la connexion à Active Directory. "
-                    "Veuillez réessayer ultérieurement ou contacter le support technique.")
-                return redirect('presence_qr_redirect', uuid=uuid)
-
-        else:
-            # Email externe : redirection vers formulaire complet
-            request.session['temp_email'] = email
-            request.session['reunion_uuid'] = str(uuid)
-            return redirect('presence_external_form', uuid=uuid)
-
-    # Si GET, rediriger vers la page de consentement
-    return redirect('presence_qr_redirect', uuid=uuid)
-
-
-"""
-
-def presence_form(request, uuid):
-    "Formulaire de demande de présence avec intégration Active Directory"
-    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
-    
-    if request.method == 'POST':
-        email = request.POST.get('email', '').lower().strip()
-        
+        # Récupération sécurisée de l'email
+        email = (request.POST.get('email') or '').strip().lower()
         if not email:
             messages.error(request, "Adresse email requise.")
             return redirect('presence_qr_redirect', uuid=uuid)
-        
+
         # Vérifier si déjà enregistré
-        existing_request = PresenceRequest.objects.filter(
-            reunion=reunion, email=email
-        ).first()
-        
+        existing_request = PresenceRequest.objects.filter(reunion=reunion, email=email).first()
         if existing_request:
             messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
             return redirect('presence_status', token=existing_request.validation_token)
-        
-        # Traitement différencié selon le domaine email
+
+        # Cas email ARTCI
         if is_artci_email(email):
             try:
-                # Récupération des informations depuis Active Directory
-                from .service_ad import ActiveDirectoryService
-
                 service_ad = ActiveDirectoryService()
                 user_info = service_ad.get_user_info(email)
-                
-                if user_info:
-                    # Création de la présence avec les données AD uniquement
-                    presence_request = PresenceRequest.objects.create(
-                        reunion=reunion,
-                        email=user_info['email'],
-                        prenom=user_info['prenom'] or '',
-                        nom=user_info['nom'] or '',
-                        organisation=user_info['entreprise'] or 'ARTCI',
-                        telephone=user_info['telephone'] or '',
-                        poste=user_info['poste'] or '',
-                        departement=user_info['departement'] or '',
-                        matricule=user_info['matricule'] or '',
-                        consent_given=True,
-                        status='confirmed',
-                        confirmed_at=timezone.now()
-                    )
-                    
-                    logger.info(f"Présence créée avec succès pour {email} depuis AD")
-                    
-                    # Envoyer email d'annulation avec délai de 5 minutes
-                    send_cancellation_email(presence_request)
-                    
-                    return render(request, 'reunions/presence_confirmed_artci.html', {
-                        'reunion': reunion,
-                        'presence_request': presence_request,
-                        'is_artci': True,
-                        'from_ad': True
-                    })
-                    
-                else:
-                    # Utilisateur non trouvé dans Active Directory
-                    logger.error(f"Utilisateur {email} non trouvé dans Active Directory")
-                    messages.error(request, 
+
+                if not user_info:
+                    logger.warning(f"Utilisateur {email} non trouvé dans AD")
+                    messages.error(request,
                         "Impossible de récupérer vos informations depuis Active Directory. "
-                        "Veuillez vérifier votre adresse email ou contacter l'administrateur système.")
+                        "Veuillez vérifier votre email ou contacter l'administrateur.")
                     return redirect('presence_qr_redirect', uuid=uuid)
-                
+
+                # Création de la présence avec données AD
+                presence_request = PresenceRequest.objects.create(
+                    reunion=reunion,
+                    email=user_info['email'],
+                    prenom=user_info.get('prenom', ''),
+                    nom=user_info.get('nom', ''),
+                    organisation=user_info.get('organisation', 'ARTCI'),
+                    fonction=user_info.get('fonction', ''),
+                    contact=user_info.get('contact', ''),
+                    poste=user_info.get('poste', ''),
+                    departement=user_info.get('departement', ''),
+                    matricule=user_info.get('matricule', ''),
+                    consent_given=True,
+                    status='confirmed',
+                    confirmed_at=timezone.now()
+                )
+
+                logger.info(f"Présence créée pour {email} depuis AD")
+                send_cancellation_email(presence_request)
+
+                return render(request, 'reunions/presence_confirmed_artci.html', {
+                    'reunion': reunion,
+                    'presence_request': presence_request,
+                    'is_artci': True,
+                    'from_ad': True
+                })
+
             except Exception as e:
-                logger.error(f"Erreur lors de la connexion à Active Directory pour {email}: {str(e)}")
-                messages.error(request, 
+                logger.error(f"Erreur connexion AD pour {email}: {str(e)}")
+                messages.error(request,
                     "Une erreur est survenue lors de la connexion à Active Directory. "
-                    "Veuillez réessayer ultérieurement ou contacter le support technique.")
+                    "Veuillez réessayer plus tard ou contacter le support.")
                 return redirect('presence_qr_redirect', uuid=uuid)
-        
+
+        # Cas email externe
         else:
-            # Email externe : redirection vers formulaire complet
             request.session['temp_email'] = email
             request.session['reunion_uuid'] = str(uuid)
             return redirect('presence_external_form', uuid=uuid)
-    
-    # Si GET, rediriger vers la page de consentement
-    return redirect('presence_qr_redirect', uuid=uuid)
 
-"""
+    # GET → redirige vers la page QR / consentement
+    return redirect('presence_qr_redirect', uuid=uuid)
