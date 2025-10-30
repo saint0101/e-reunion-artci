@@ -16,7 +16,7 @@ success, message = ad.test_connection()
 print(f"Test connexion: {message}")
 
 # Test de récupération d'un utilisateur
-email_test = "dja.rodrigue@artci.ci"  # Remplacez par un vrai email
+email_test = "missainhoun.efua@artci.ci"  # Remplacez par un vrai email
 user_info = ad.get_user_info(email_test)
 
 if user_info:

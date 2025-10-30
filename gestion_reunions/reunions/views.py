@@ -1669,7 +1669,6 @@ Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
     
 
 
-
 def presence_form(request, uuid):
     """
     Formulaire de demande de présence avec intégration Active Directory.
@@ -1702,12 +1701,16 @@ def presence_form(request, uuid):
                         "Veuillez vérifier votre email ou contacter l'administrateur.")
                     return redirect('presence_qr_redirect', uuid=uuid)
 
+                # Normalisation du nom et du prénom
+                prenom = user_info.get('prenom', '').capitalize() if user_info.get('prenom') else ''
+                nom = user_info.get('nom', '').upper() if user_info.get('nom') else ''
+
                 # Création de la présence avec données AD
                 presence_request = PresenceRequest.objects.create(
                     reunion=reunion,
                     email=user_info['email'],
-                    prenom=user_info.get('prenom', ''),
-                    nom=user_info.get('nom', ''),
+                    prenom=prenom,
+                    nom=nom,
                     organisation=user_info.get('organisation', 'ARTCI'),
                     fonction=user_info.get('fonction', ''),
                     contact=user_info.get('contact', ''),
