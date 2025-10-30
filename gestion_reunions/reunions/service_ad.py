@@ -51,15 +51,23 @@ class ActiveDirectoryService:
                 return None
             
             user_entry = conn.entries[0]
-            
-            def safe_get(entry, attr_name, default=''):
+                        
+            def safe_get_value(entry, attr_name, default=''):
                 try:
                     attr = getattr(entry, attr_name, None)
-                    if attr and hasattr(attr, 'value') and attr.value is not None:
-                        return str(attr.value).strip()
-                    return default
+                    if not attr or not hasattr(attr, 'value'):
+                        return default
+                    
+                    value = attr.value
+                    if isinstance(value, (list, tuple)):
+                        value = value[0] if value else default
+
+                    if value is None:
+                        return default
+
+                    return str(value).strip()
                 except Exception as e:
-                    logger.warning(f"Erreur extraction {attr_name}: {str(e)}")
+                    logger.warning(f"Erreur extraction {attr_name}: {e}")
                     return default
             
             user_info = {
