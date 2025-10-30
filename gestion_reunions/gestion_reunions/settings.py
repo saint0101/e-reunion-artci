@@ -14,7 +14,11 @@ import os
 from pathlib import Path
 from decouple import config
 from email.utils import formataddr
+from dotenv import load_dotenv
 
+
+# Charger le fichier .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -302,10 +306,10 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-        'cancellation_file': {
+       'cancellation_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': 'logs/cancellations.log',
+            'filename': BASE_DIR / 'reunions/logs/cancellations.log',
             'formatter': 'verbose',
         },
     },
@@ -383,16 +387,21 @@ LOGGING = {
 
 """
 # REDIS CONFIGURATION
+
+"""
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://redis:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
 }
 
+
+
+"""
 
 # Configuration Celery pour les tâches périodiques
 from celery.schedules import crontab
@@ -412,6 +421,34 @@ CELERY_TIMEZONE = 'UTC'
 # Session Configuration
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
+
+
+
+# Configuration Active Directory
+AD_SERVER = os.getenv('AD_SERVER')
+AD_PORT = int(os.getenv('AD_PORT', 389))
+AD_BIND_DN = os.getenv('AD_BIND_DN')
+AD_BIND_PASSWORD = os.getenv('AD_BIND_PASSWORD')
+AD_SEARCH_BASE = os.getenv('AD_SEARCH_BASE')
+AD_USER_SEARCH_FILTER = os.getenv('AD_USER_SEARCH_FILTER')
+
+
+# Attributs à récupérer
+AD_USER_ATTRIBUTES = [
+    'sAMAccountName',
+    'cn',
+    'givenName',
+    'sn',
+    'mail',
+    'userPrincipalName',
+    'telephoneNumber',
+    'department',
+    'title',
+    'company',
+    'physicalDeliveryOfficeName',
+    'manager'
+]
+
 
 # ✅ AJOUT: Variables pour débuguer les redirections
 if DEBUG:
