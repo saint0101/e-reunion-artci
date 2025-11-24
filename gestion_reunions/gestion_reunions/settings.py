@@ -85,7 +85,19 @@ INSTALLED_APPS = [
     # Local apps
     'reunions',
     'accounts',
+    
+    # Ajout de l'application import-export
+     "import_export", 
 ]
+
+# Formats autorisés pour import/export
+from import_export.formats.base_formats import CSV, XLSX, JSON
+IMPORT_FORMATS = [CSV, XLSX, JSON]
+
+# Transactions automatiques pour l'import (rollback si erreur)
+IMPORT_EXPORT_USE_TRANSACTIONS = True
+
+
 
 # ✅ AJOUT: WhiteNoise pour servir les fichiers statiques
 MIDDLEWARE = [

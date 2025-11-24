@@ -44,3 +44,6 @@ ldap3==2.9.1
 python-ldap==3.4.5
 python-dotenv==1.2.1
 python-decouple==3.8
+
+# Import-export
+django-import-export

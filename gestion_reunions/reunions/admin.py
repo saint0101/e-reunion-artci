@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import CustomUser, Reunion, PresenceRequest, CompteRendu
 from .models import CancellationLog
+from import_export.admin import ImportExportModelAdmin
 
 
 @admin.register(CustomUser)
@@ -36,7 +37,7 @@ class CompteRenduInline(admin.TabularInline):
     fields = ('titre', 'fichier', 'version', 'cree_par', 'envoye_automatiquement')
 
 @admin.register(Reunion)
-class ReunionAdmin(admin.ModelAdmin):
+class ReunionAdmin(ImportExportModelAdmin):
     list_display = ('titre', 'date_debut', 'lieu', 'organisateur', 'secretaire', 'status', 'participants_count', 'qr_code_link')
     list_filter = ('status', 'date_debut', 'organisateur', 'secretaire')
     search_fields = ('titre', 'description', 'lieu')
@@ -86,7 +87,7 @@ class ReunionAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('organisateur', 'secretaire').prefetch_related('presence_requests')
 
 @admin.register(PresenceRequest)
-class PresenceRequestAdmin(admin.ModelAdmin):
+class PresenceRequestAdmin(ImportExportModelAdmin):
     list_display = ('email', 'reunion', 'nom', 'prenom', 'status', 'created_at', 'confirmed_at')
     list_filter = ('status', 'created_at', 'reunion__date_debut')
     search_fields = ('email', 'nom', 'prenom', 'reunion__titre')
@@ -112,7 +113,7 @@ class PresenceRequestAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('reunion')
 
 @admin.register(CompteRendu)
-class CompteRenduAdmin(admin.ModelAdmin):
+class CompteRenduAdmin(ImportExportModelAdmin):
     list_display = ('titre', 'reunion', 'version', 'cree_par', 'created_at', 'envoye_automatiquement', 'download_link')
     list_filter = ('envoye_automatiquement', 'created_at', 'reunion__date_debut')
     search_fields = ('titre', 'reunion__titre')
@@ -145,7 +146,7 @@ class CompteRenduAdmin(admin.ModelAdmin):
 
 
 @admin.register(CancellationLog)
-class CancellationLogAdmin(admin.ModelAdmin):
+class CancellationLogAdmin(ImportExportModelAdmin):
     list_display = ('presence_request', 'cancelled_at', 'cancelled_by_ip', 'secretary_notified')
     list_filter = ('secretary_notified', 'cancelled_at')
     search_fields = ('presence_request__email', 'secretary_email', 'cancellation_reason')
