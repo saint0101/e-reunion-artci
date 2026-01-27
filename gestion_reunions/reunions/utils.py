@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.units import inch
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -34,14 +34,14 @@ def generate_presence_report(reunion, format_type='pdf'):
 
 
 def generate_pdf_report(reunion, presences):
-    """Génère un rapport PDF de présence ajusté à la page avec retour à la ligne automatique."""
+    """Génère un rapport PDF de présence avec mention légale en pied de page."""
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
         topMargin=0.8 * inch,
-        bottomMargin=1.2 * inch,  # Augmenté pour laisser place au pied de page
+        bottomMargin=1.5 * inch,  # Augmenté pour le pied de page
         leftMargin=0.4 * inch,
         rightMargin=0.4 * inch
     )
@@ -152,50 +152,54 @@ def generate_pdf_report(reunion, presences):
     else:
         story.append(Paragraph("Aucun participant confirmé.", styles['Normal']))
 
-    # --- PIED DE PAGE AVEC MENTION LÉGALE ET SIGNATURE ---
-    def add_footer(canvas, doc):
-        canvas.saveState()
+    # --- ESPACE ENTRE LE TABLEAU ET LE PIED DE PAGE ---
+    story.append(Spacer(1, 48))
+
+    # --- FONCTION POUR AJOUTER LE PIED DE PAGE ---
+    def add_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
         
-        # Position du pied de page
-        footer_y = 0.5 * inch
+        # Position du pied de page (bas de page)
+        page_width = A4[0]
+        page_height = A4[1]
+        footer_y = 0.4 * inch
+        
+        # Ligne de séparation horizontale
+        canvas_obj.setStrokeColor(colors.HexColor('#CCCCCC'))
+        canvas_obj.setLineWidth(0.5)
+        canvas_obj.line(0.4 * inch, footer_y + 1.0 * inch, page_width - 0.4 * inch, footer_y + 1.0 * inch)
         
         # Style pour la mention légale
-        legal_style = ParagraphStyle(
-            'LegalNotice',
+        legal_style_footer = ParagraphStyle(
+            'LegalNoticeFooter',
             fontName='Helvetica',
             fontSize=7,
-            leading=9,
+            leading=8.5,
             textColor=colors.HexColor('#555555'),
             alignment=4,  # Justifié
         )
         
         # Texte de la mention légale
-        legal_text = """
-        Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, de rectification et de suppression auprès de ladite Direction.
-        """
+        legal_text = """Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, de rectification et de suppression auprès de ladite Direction."""
         
         # Créer le paragraphe de mention légale
-        legal_para = Paragraph(legal_text, legal_style)
-        w, h = legal_para.wrap(7.5 * inch, 2 * inch)
-        legal_para.drawOn(canvas, 0.4 * inch, footer_y + 0.8 * inch)
-        
-        # Ligne de séparation
-        canvas.setStrokeColor(colors.HexColor('#CCCCCC'))
-        canvas.setLineWidth(0.5)
-        canvas.line(0.4 * inch, footer_y + 0.7 * inch, 8.27 * inch - 0.4 * inch, footer_y + 0.7 * inch)
+        legal_para = Paragraph(legal_text, legal_style_footer)
+        available_width = page_width - (0.8 * inch)
+        w, h = legal_para.wrap(available_width, 2 * inch)
+        legal_para.drawOn(canvas_obj, 0.4 * inch, footer_y + 0.55 * inch)
         
         # Informations de signature
-        canvas.setFont('Helvetica', 8)
-        canvas.setFillColor(colors.HexColor('#333333'))
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(colors.HexColor('#333333'))
         
-        signature_y = footer_y + 0.3 * inch
-        canvas.drawString(0.4 * inch, signature_y, f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
-        canvas.drawString(0.4 * inch, signature_y - 0.15 * inch, "Par : QR Meeting System")
+        signature_y = footer_y + 0.15 * inch
+        canvas_obj.drawString(0.4 * inch, signature_y, f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
+        canvas_obj.drawString(0.4 * inch, signature_y - 0.15 * inch, "Par : QR Meeting System")
         
         # Signature organisateur à droite
-        canvas.drawRightString(8.27 * inch - 0.4 * inch, signature_y, "Signature organisateur : _______________")
+        canvas_obj.drawRightString(page_width - 0.4 * inch, signature_y, "Signature organisateur : _______________")
         
-        canvas.restoreState()
+        canvas_obj.restoreState()
 
     # --- EXPORT PDF avec pied de page ---
     doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
@@ -209,7 +213,7 @@ def generate_pdf_report(reunion, presences):
 
 
 def generate_excel_report(reunion, presences):
-    """Génère un rapport Excel de présence avec nouveaux champs"""
+    """Génère un rapport Excel de présence avec mention légale en pied de page"""
     wb = Workbook()
     ws = wb.active
     ws.title = "Liste de Présence"
@@ -277,12 +281,22 @@ def generate_excel_report(reunion, presences):
         for col in range(1, 8):
             ws.cell(row=row, column=col).border = thin_border
     
-    # PIED DE PAGE - Mention légale et signature
-    footer_row = 9 + presences.count() + 2
+    # --- ESPACE ENTRE LE TABLEAU ET LE PIED DE PAGE ---
+    space_row = 9 + presences.count() + 2
+    
+    # --- PIED DE PAGE ---
+    footer_start_row = space_row + 1
+    
+    # Ligne de séparation
+    ws.merge_cells(f'A{footer_start_row}:G{footer_start_row}')
+    separator_cell = ws[f'A{footer_start_row}']
+    separator_cell.value = ""
+    separator_cell.border = Border(top=Side(style='thin', color='CCCCCC'))
     
     # Mention légale (sans titre)
-    ws.merge_cells(f'A{footer_row}:G{footer_row + 1}')
-    legal_cell = ws[f'A{footer_row}']
+    legal_row = footer_start_row + 1
+    ws.merge_cells(f'A{legal_row}:G{legal_row + 1}')
+    legal_cell = ws[f'A{legal_row}']
     legal_text = (
         "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
         "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. "
@@ -291,15 +305,15 @@ def generate_excel_report(reunion, presences):
     )
     legal_cell.value = legal_text
     legal_cell.font = Font(size=8, italic=True, color="555555")
-    legal_cell.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=True)
+    legal_cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
     legal_cell.fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
-    ws.row_dimensions[footer_row].height = 50
+    ws.row_dimensions[legal_row].height = 50
     
-    # Ligne de séparation
-    separator_row = footer_row + 2
+    # Ligne vide
+    empty_row = legal_row + 2
     
-    # Signature
-    signature_row = separator_row + 1
+    # Informations de signature
+    signature_row = empty_row + 1
     ws[f'A{signature_row}'] = f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
     ws[f'A{signature_row}'].font = Font(size=9)
     
@@ -309,6 +323,7 @@ def generate_excel_report(reunion, presences):
     ws[f'E{signature_row}'] = "Signature organisateur :"
     ws[f'E{signature_row}'].font = Font(size=9, bold=True)
     ws.merge_cells(f'F{signature_row}:G{signature_row}')
+    ws[f'F{signature_row}'].value = "_______________"
     
     # Sauvegarde
     buffer = io.BytesIO()
@@ -325,16 +340,69 @@ def generate_excel_report(reunion, presences):
 
 
 def generate_word_report(reunion, presences):
-    """Génère un rapport Word de présence avec nouveaux champs"""
+    """Génère un rapport Word de présence avec mention légale en pied de page"""
     doc = Document()
     
     # Configuration des marges
     sections = doc.sections
     for section in sections:
         section.top_margin = Inches(0.8)
-        section.bottom_margin = Inches(1.2)  # Augmenté pour le pied de page
+        section.bottom_margin = Inches(1.2)
         section.left_margin = Inches(0.5)
         section.right_margin = Inches(0.5)
+        
+        # Configurer le pied de page
+        footer = section.footer
+        
+        # Ligne de séparation dans le pied de page
+        footer_para_separator = footer.paragraphs[0]
+        footer_para_separator.text = ""
+        footer_para_separator.paragraph_format.border_top = True
+        
+        # Mention légale dans le pied de page
+        legal_para = footer.add_paragraph()
+        legal_text = (
+            "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
+            "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. "
+            "Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, "
+            "de rectification et de suppression auprès de ladite Direction."
+        )
+        legal_run = legal_para.add_run(legal_text)
+        legal_run.font.size = Pt(8)
+        legal_run.font.italic = True
+        legal_run.font.color.rgb = RGBColor(85, 85, 85)
+        legal_para.paragraph_format.left_indent = Inches(0.3)
+        legal_para.paragraph_format.right_indent = Inches(0.3)
+        legal_para.paragraph_format.space_after = Pt(6)
+        
+        # Fond gris clair pour la mention légale
+        shading_elm = OxmlElement('w:shd')
+        shading_elm.set(qn('w:fill'), 'F8F9FA')
+        legal_para._element.get_or_add_pPr().append(shading_elm)
+        
+        # Table de signature dans le pied de page
+        footer.add_paragraph()  # Espace
+        signature_table = footer.add_table(rows=2, cols=2)
+        
+        # Première ligne
+        signature_table.cell(0, 0).text = f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+        signature_table.cell(0, 0).paragraphs[0].runs[0].font.size = Pt(9)
+        
+        signature_table.cell(0, 1).text = "Signature organisateur : _______________"
+        signature_table.cell(0, 1).paragraphs[0].runs[0].font.size = Pt(9)
+        signature_table.cell(0, 1).paragraphs[0].runs[0].font.bold = True
+        signature_table.cell(0, 1).paragraphs[0].alignment = 2  # Aligné à droite
+        
+        # Deuxième ligne
+        signature_table.cell(1, 0).text = "Par : QR Meeting System"
+        signature_table.cell(1, 0).paragraphs[0].runs[0].font.size = Pt(9)
+        
+        # Supprimer les bordures du tableau de signature
+        for row in signature_table.rows:
+            for cell in row.cells:
+                cell._element.get_or_add_tcPr().append(
+                    OxmlElement('w:tcBorders')
+                )
     
     # Titre
     title = doc.add_heading(f'Liste de Présence - {reunion.titre}', 0)
@@ -391,52 +459,9 @@ def generate_word_report(reunion, presences):
     else:
         doc.add_paragraph('Aucun participant confirmé')
     
-    # PIED DE PAGE - Mention légale (sans titre)
+    # Espace entre le tableau et le pied de page (le pied de page est automatique)
     doc.add_paragraph()
-    doc.add_paragraph()  # Espace
-    
-    legal_text = (
-        "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
-        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. "
-        "Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, "
-        "de rectification et de suppression auprès de ladite Direction."
-    )
-
-    legal_para = doc.add_paragraph(legal_text)
-    legal_para_format = legal_para.paragraph_format
-    legal_para_format.left_indent = Inches(0.3)
-    legal_para_format.right_indent = Inches(0.3)
-    legal_para_format.space_before = Pt(12)
-    legal_para_format.space_after = Pt(12)
-
-    for run in legal_para.runs:
-        run.font.size = Pt(8)
-        run.font.italic = True
-        run.font.color.rgb = RGBColor(85, 85, 85)
-
-    # Ajouter un fond gris clair
-    shading_elm = OxmlElement('w:shd')
-    shading_elm.set(qn('w:fill'), 'F8F9FA')
-    legal_para._element.get_or_add_pPr().append(shading_elm)
-    
-    # Signature
     doc.add_paragraph()
-    signature_table = doc.add_table(rows=3, cols=2)
-    
-    signature_data = [
-        (f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}", ''),
-        ('Par : QR Meeting System', ''),
-        ('', 'Signature organisateur : _______________'),
-    ]
-    
-    for i, (left, right) in enumerate(signature_data):
-        signature_table.cell(i, 0).text = left
-        signature_table.cell(i, 1).text = right
-        if i < 2:
-            signature_table.cell(i, 0).paragraphs[0].runs[0].font.size = Pt(9)
-        else:
-            signature_table.cell(i, 1).paragraphs[0].runs[0].font.bold = True
-            signature_table.cell(i, 1).paragraphs[0].runs[0].font.size = Pt(9)
     
     # Sauvegarde
     buffer = io.BytesIO()
