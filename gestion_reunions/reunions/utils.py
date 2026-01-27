@@ -41,6 +41,7 @@ def generate_pdf_report(reunion, presences):
         buffer,
         pagesize=A4,
         topMargin=0.8 * inch,
+        bottomMargin=1.2 * inch,  # Augmenté pour laisser place au pied de page
         leftMargin=0.4 * inch,
         rightMargin=0.4 * inch
     )
@@ -151,51 +152,53 @@ def generate_pdf_report(reunion, presences):
     else:
         story.append(Paragraph("Aucun participant confirmé.", styles['Normal']))
 
-    # --- MENTION LÉGALE RGPD ---
-    story.append(Spacer(1, 24))
+    # --- PIED DE PAGE AVEC MENTION LÉGALE ET SIGNATURE ---
+    def add_footer(canvas, doc):
+        canvas.saveState()
+        
+        # Position du pied de page
+        footer_y = 0.5 * inch
+        
+        # Style pour la mention légale
+        legal_style = ParagraphStyle(
+            'LegalNotice',
+            fontName='Helvetica',
+            fontSize=7,
+            leading=9,
+            textColor=colors.HexColor('#555555'),
+            alignment=4,  # Justifié
+        )
+        
+        # Texte de la mention légale
+        legal_text = """
+        Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, de rectification et de suppression auprès de ladite Direction.
+        """
+        
+        # Créer le paragraphe de mention légale
+        legal_para = Paragraph(legal_text, legal_style)
+        w, h = legal_para.wrap(7.5 * inch, 2 * inch)
+        legal_para.drawOn(canvas, 0.4 * inch, footer_y + 0.8 * inch)
+        
+        # Ligne de séparation
+        canvas.setStrokeColor(colors.HexColor('#CCCCCC'))
+        canvas.setLineWidth(0.5)
+        canvas.line(0.4 * inch, footer_y + 0.7 * inch, 8.27 * inch - 0.4 * inch, footer_y + 0.7 * inch)
+        
+        # Informations de signature
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(colors.HexColor('#333333'))
+        
+        signature_y = footer_y + 0.3 * inch
+        canvas.drawString(0.4 * inch, signature_y, f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
+        canvas.drawString(0.4 * inch, signature_y - 0.15 * inch, "Par : QR Meeting System")
+        
+        # Signature organisateur à droite
+        canvas.drawRightString(8.27 * inch - 0.4 * inch, signature_y, "Signature organisateur : _______________")
+        
+        canvas.restoreState()
 
-    legal_style = ParagraphStyle(
-        'LegalNotice',
-        parent=styles['Normal'],
-        fontSize=8,
-        leading=10,
-        textColor=colors.HexColor('#555555'),
-        alignment=4,  # Justifié
-        leftIndent=20,
-        rightIndent=20,
-        spaceBefore=10,
-        spaceAfter=10
-    )
-
-    legal_text = """
-    <b>Mention légale :</b><br/>
-    Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, dans le cadre de la présente rencontre exclusivement aux fins de vous identifier.<br/><br/>
-    Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, de rectification et de suppression auprès de ladite Direction.
-    """
-
-    legal_notice = Paragraph(legal_text, legal_style)
-    story.append(legal_notice)
-
-    # --- SIGNATURE ---
-    story.append(Spacer(1, 24))
-    signature_data = [
-        ['Généré le :', datetime.now().strftime('%d/%m/%Y à %H:%M')],
-        ['Par :', 'QR Meeting System'],
-        ['Signature organisateur :', ''],
-    ]
-    signature_table = Table(signature_data, colWidths=[2 * inch, 4 * inch])
-    signature_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        # Supprimer toutes les bordures
-        ('BOX', (0, 0), (-1, -1), 0, colors.white),
-        ('INNERGRID', (0, 0), (-1, -1), 0, colors.white),
-    ]))
-    story.append(signature_table)
-
-    # --- EXPORT PDF ---
-    doc.build(story)
+    # --- EXPORT PDF avec pied de page ---
+    doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = (
@@ -254,7 +257,7 @@ def generate_excel_report(reunion, presences):
         ws.cell(row=row, column=7, value=presence.email).alignment = wrap_alignment
     
     # Ajustement automatique des colonnes avec largeurs optimisées
-    column_widths = [8, 20, 20, 25, 20, 15, 30]  # Largeurs personnalisées
+    column_widths = [8, 20, 20, 25, 20, 15, 30]
     for i, width in enumerate(column_widths, 1):
         ws.column_dimensions[chr(64 + i)].width = width
     
@@ -274,26 +277,38 @@ def generate_excel_report(reunion, presences):
         for col in range(1, 8):
             ws.cell(row=row, column=col).border = thin_border
     
-    # Mention légale RGPD
-    legal_row = 9 + presences.count() + 2
-    ws.merge_cells(f'A{legal_row}:G{legal_row + 2}')
-    legal_cell = ws[f'A{legal_row}']
-
+    # PIED DE PAGE - Mention légale et signature
+    footer_row = 9 + presences.count() + 2
+    
+    # Mention légale (sans titre)
+    ws.merge_cells(f'A{footer_row}:G{footer_row + 1}')
+    legal_cell = ws[f'A{footer_row}']
     legal_text = (
-        "Mention légale :\n"
         "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
-        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier.\n\n"
+        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. "
         "Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, "
         "de rectification et de suppression auprès de ladite Direction."
     )
-
     legal_cell.value = legal_text
-    legal_cell.font = Font(size=9, italic=True, color="555555")
-    legal_cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    legal_cell.font = Font(size=8, italic=True, color="555555")
+    legal_cell.alignment = Alignment(horizontal="justify", vertical="top", wrap_text=True)
     legal_cell.fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
-
-    # Ajuster la hauteur des lignes fusionnées
-    ws.row_dimensions[legal_row].height = 60
+    ws.row_dimensions[footer_row].height = 50
+    
+    # Ligne de séparation
+    separator_row = footer_row + 2
+    
+    # Signature
+    signature_row = separator_row + 1
+    ws[f'A{signature_row}'] = f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+    ws[f'A{signature_row}'].font = Font(size=9)
+    
+    ws[f'A{signature_row + 1}'] = "Par : QR Meeting System"
+    ws[f'A{signature_row + 1}'].font = Font(size=9)
+    
+    ws[f'E{signature_row}'] = "Signature organisateur :"
+    ws[f'E{signature_row}'].font = Font(size=9, bold=True)
+    ws.merge_cells(f'F{signature_row}:G{signature_row}')
     
     # Sauvegarde
     buffer = io.BytesIO()
@@ -317,7 +332,7 @@ def generate_word_report(reunion, presences):
     sections = doc.sections
     for section in sections:
         section.top_margin = Inches(0.8)
-        section.bottom_margin = Inches(0.8)
+        section.bottom_margin = Inches(1.2)  # Augmenté pour le pied de page
         section.left_margin = Inches(0.5)
         section.right_margin = Inches(0.5)
     
@@ -376,14 +391,13 @@ def generate_word_report(reunion, presences):
     else:
         doc.add_paragraph('Aucun participant confirmé')
     
-    # Mention légale RGPD
+    # PIED DE PAGE - Mention légale (sans titre)
     doc.add_paragraph()
-    legal_heading = doc.add_heading('Mention légale', level=3)
-    legal_heading.runs[0].font.size = Pt(10)
-
+    doc.add_paragraph()  # Espace
+    
     legal_text = (
         "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
-        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier.\n\n"
+        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier. "
         "Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, "
         "de rectification et de suppression auprès de ladite Direction."
     )
@@ -392,9 +406,11 @@ def generate_word_report(reunion, presences):
     legal_para_format = legal_para.paragraph_format
     legal_para_format.left_indent = Inches(0.3)
     legal_para_format.right_indent = Inches(0.3)
+    legal_para_format.space_before = Pt(12)
+    legal_para_format.space_after = Pt(12)
 
     for run in legal_para.runs:
-        run.font.size = Pt(9)
+        run.font.size = Pt(8)
         run.font.italic = True
         run.font.color.rgb = RGBColor(85, 85, 85)
 
@@ -405,20 +421,22 @@ def generate_word_report(reunion, presences):
     
     # Signature
     doc.add_paragraph()
-    doc.add_paragraph()
     signature_table = doc.add_table(rows=3, cols=2)
-    signature_table.style = 'Light Grid Accent 1'
     
     signature_data = [
-        ('Généré le:', datetime.now().strftime('%d/%m/%Y à %H:%M')),
-        ('Par:', 'QR Meeting System'),
-        ('Signature organisateur:', ''),
+        (f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}", ''),
+        ('Par : QR Meeting System', ''),
+        ('', 'Signature organisateur : _______________'),
     ]
     
-    for i, (label, value) in enumerate(signature_data):
-        signature_table.cell(i, 0).text = label
-        signature_table.cell(i, 1).text = value
-        signature_table.cell(i, 0).paragraphs[0].runs[0].font.bold = True
+    for i, (left, right) in enumerate(signature_data):
+        signature_table.cell(i, 0).text = left
+        signature_table.cell(i, 1).text = right
+        if i < 2:
+            signature_table.cell(i, 0).paragraphs[0].runs[0].font.size = Pt(9)
+        else:
+            signature_table.cell(i, 1).paragraphs[0].runs[0].font.bold = True
+            signature_table.cell(i, 1).paragraphs[0].runs[0].font.size = Pt(9)
     
     # Sauvegarde
     buffer = io.BytesIO()
