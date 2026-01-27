@@ -26,7 +26,6 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-
 # Charger le fichier .env depuis la racine du projet
 BASE_DIR = Path(__file__).resolve().parent.parent  # ← dossier gestion_reunions/
 dotenv_path = BASE_DIR / ".env"

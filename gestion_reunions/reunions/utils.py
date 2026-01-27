@@ -9,12 +9,14 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.units import inch
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from docx import Document
-from docx.shared import Inches
-from docx.shared import RGBColor
+from docx.shared import Inches, Pt, RGBColor
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 import io
 from datetime import datetime
+
 
 def generate_presence_report(reunion, format_type='pdf'):
     """Génère un rapport de présence dans le format spécifié"""
@@ -149,8 +151,33 @@ def generate_pdf_report(reunion, presences):
     else:
         story.append(Paragraph("Aucun participant confirmé.", styles['Normal']))
 
+    # --- MENTION LÉGALE RGPD ---
+    story.append(Spacer(1, 24))
+
+    legal_style = ParagraphStyle(
+        'LegalNotice',
+        parent=styles['Normal'],
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor('#555555'),
+        alignment=4,  # Justifié
+        leftIndent=20,
+        rightIndent=20,
+        spaceBefore=10,
+        spaceAfter=10
+    )
+
+    legal_text = """
+    <b>Mention légale :</b><br/>
+    Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, dans le cadre de la présente rencontre exclusivement aux fins de vous identifier.<br/><br/>
+    Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, de rectification et de suppression auprès de ladite Direction.
+    """
+
+    legal_notice = Paragraph(legal_text, legal_style)
+    story.append(legal_notice)
+
     # --- SIGNATURE ---
-    story.append(Spacer(1, 48))
+    story.append(Spacer(1, 24))
     signature_data = [
         ['Généré le :', datetime.now().strftime('%d/%m/%Y à %H:%M')],
         ['Par :', 'QR Meeting System'],
@@ -174,6 +201,7 @@ def generate_pdf_report(reunion, presences):
     response['Content-Disposition'] = (
         f'attachment; filename="presence_{reunion.titre.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
     )
+
     return response
 
 
@@ -235,7 +263,6 @@ def generate_excel_report(reunion, presences):
         ws.row_dimensions[row].height = 20
     
     # Ajouter des bordures
-    from openpyxl.styles import Border, Side
     thin_border = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
@@ -247,6 +274,27 @@ def generate_excel_report(reunion, presences):
         for col in range(1, 8):
             ws.cell(row=row, column=col).border = thin_border
     
+    # Mention légale RGPD
+    legal_row = 9 + presences.count() + 2
+    ws.merge_cells(f'A{legal_row}:G{legal_row + 2}')
+    legal_cell = ws[f'A{legal_row}']
+
+    legal_text = (
+        "Mention légale :\n"
+        "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
+        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier.\n\n"
+        "Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, "
+        "de rectification et de suppression auprès de ladite Direction."
+    )
+
+    legal_cell.value = legal_text
+    legal_cell.font = Font(size=9, italic=True, color="555555")
+    legal_cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    legal_cell.fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
+
+    # Ajuster la hauteur des lignes fusionnées
+    ws.row_dimensions[legal_row].height = 60
+    
     # Sauvegarde
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -257,7 +305,7 @@ def generate_excel_report(reunion, presences):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="presence_{reunion.titre.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
-    
+
     return response
 
 
@@ -306,10 +354,10 @@ def generate_word_report(reunion, presences):
         
         # En-têtes
         headers = ['N°', 'Nom', 'Prénom', 'Structure/Organisation', 'Fonction', 'Contact', 'Email']
+        hdr_cells = table.rows[0].cells
         for i, header in enumerate(headers):
-            cell = table.cell(0, i)
-            cell.text = header
-            cell.paragraphs[0].runs[0].font.bold = True
+            hdr_cells[i].text = header
+            hdr_cells[i].paragraphs[0].runs[0].font.bold = True
         
         # Données
         presences_list = list(presences)
@@ -322,32 +370,38 @@ def generate_word_report(reunion, presences):
             row_cells[4].text = presence.fonction or '—'
             row_cells[5].text = presence.contact or '—'
             row_cells[6].text = presence.email
-        
-        # Ajuster la largeur des colonnes
-        """
-        from docx.shared import Cm
-        table.columns[0].width = Cm(1)    # N°
-        table.columns[1].width = Cm(2.5)  # Nom
-        table.columns[2].width = Cm(2.5)  # Prénom
-        table.columns[3].width = Cm(3.5)  # Structure
-        table.columns[4].width = Cm(3)    # Fonction
-        table.columns[5].width = Cm(2.5)  # Contact
-        table.columns[6].width = Cm(4)    # Email
-        """
 
-        table.autofit = True  # ⚙️ Laisse Word ajuster les colonnes automatiquement
-
-        hdr_cells = table.rows[0].cells
-        hdr_cells[0].text = 'N°'
-        hdr_cells[1].text = 'Nom'
-        hdr_cells[2].text = 'Prénom'
-        hdr_cells[3].text = 'Structure/Organisation'
-        hdr_cells[4].text = 'Fonction'
-        hdr_cells[5].text = 'Contact'
-        hdr_cells[6].text = 'Email'
+        table.autofit = True
         
     else:
         doc.add_paragraph('Aucun participant confirmé')
+    
+    # Mention légale RGPD
+    doc.add_paragraph()
+    legal_heading = doc.add_heading('Mention légale', level=3)
+    legal_heading.runs[0].font.size = Pt(10)
+
+    legal_text = (
+        "Vos données personnelles sont collectées et traitées par la Direction de la Protection des Données Personnelles de l'ARTCI, "
+        "dans le cadre de la présente rencontre exclusivement aux fins de vous identifier.\n\n"
+        "Conformément à la loi n°2013-450 du 19 juin 2013, vous pouvez exercer vos droits d'accès, d'opposition, "
+        "de rectification et de suppression auprès de ladite Direction."
+    )
+
+    legal_para = doc.add_paragraph(legal_text)
+    legal_para_format = legal_para.paragraph_format
+    legal_para_format.left_indent = Inches(0.3)
+    legal_para_format.right_indent = Inches(0.3)
+
+    for run in legal_para.runs:
+        run.font.size = Pt(9)
+        run.font.italic = True
+        run.font.color.rgb = RGBColor(85, 85, 85)
+
+    # Ajouter un fond gris clair
+    shading_elm = OxmlElement('w:shd')
+    shading_elm.set(qn('w:fill'), 'F8F9FA')
+    legal_para._element.get_or_add_pPr().append(shading_elm)
     
     # Signature
     doc.add_paragraph()
@@ -376,7 +430,7 @@ def generate_word_report(reunion, presences):
         content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
     response['Content-Disposition'] = f'attachment; filename="presence_{reunion.titre.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M")}.docx"'
-    
+
     return response
 
 
