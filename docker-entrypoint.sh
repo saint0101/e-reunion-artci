@@ -113,18 +113,18 @@ main() {
     echo "🌐 Informations de connexion:"
     echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "   📱 URL publique: http://196.216.227.105:80"
-    echo "   🏠 URL locale:   http://172.16.0.153:8080"
+    echo "   🏠 URL locale:   http://172.16.0.153:8000"
     echo "   👤 Admin:        ${DJANGO_SUPERUSER_USERNAME:-admin}"
     echo "   🔑 Password:     ${DJANGO_SUPERUSER_PASSWORD:-admin123}"
     echo "   🔧 Admin panel:  http://196.216.227.105:80/admin"
     echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    echo "🚀 Démarrage de Gunicorn sur 0.0.0.0:80..."
+    echo "🚀 Démarrage de Gunicorn sur 0.0.0.0:8000..."
     
     # ✅ CORRECTION FINALE: Gunicorn avec logs vers stdout/stderr
     exec gunicorn gestion_reunions.wsgi:application \
-        --bind 0.0.0.0:80 \
+        --bind 0.0.0.0:8000 \
         --workers 3 \
         --worker-class gthread \
         --worker-connections 1000 \
