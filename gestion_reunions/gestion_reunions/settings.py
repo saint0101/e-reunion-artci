@@ -50,12 +50,12 @@ ALLOWED_HOSTS = [
 ]
 """
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', 'meeting.artci.ci','www.meeting.artci.ci']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', "meeting.artci.ci", "www.meeting.artci.ci"]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://meeting.artci.ci",
-    "https://www.meeting.artci.ci",
-]
+
+CSRF_TRUSTED_ORIGINS = ["http://meeting.artci.ci", "https://meeting.artci.ci",
+                        "http://www.meeting.artci.ci", "https://www.meeting.artci.ci"]
+
 
 # ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', '*']
 
@@ -269,6 +269,8 @@ LOGOUT_REDIRECT_URL = '/'
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ✅ CORRECTION: Security Settings seulement si vraiment en production
 if not DEBUG and os.environ.get('PRODUCTION', 'False').lower() == 'true':
