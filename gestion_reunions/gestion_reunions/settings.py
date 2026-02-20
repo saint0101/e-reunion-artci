@@ -39,6 +39,8 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = [
     "127.0.0.1", 
     "localhost", 
+    "meeting.artci.ci",
+    "www.meeting.artci.ci",
     "196.216.227.105",  # IP publique serveur
     "172.16.0.153",     # IP locale serveur
     "196.216.227.181",  # IP qui accède depuis les logs
@@ -48,7 +50,14 @@ ALLOWED_HOSTS = [
 ]
 """
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', '*']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', 'meeting.artci.ci','www.meeting.artci.ci']
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://meeting.artci.ci",
+    "https://www.meeting.artci.ci",
+]
+
+# ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', '*']
 
 # ✅ CORRECTION: URL du site dynamique
 def get_site_url(request=None):
