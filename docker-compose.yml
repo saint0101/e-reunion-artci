@@ -13,7 +13,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db_backup:/backup
     ports:
-      - "127.0.0.1:5432:5432"  # Seulement accessible localement
+      - "127.0.0.1:5432:5432"
     networks:
       - edcp_network
     healthcheck:
@@ -27,7 +27,7 @@ services:
     image: redis:7-alpine
     container_name: artci_redis
     ports:
-      - "127.0.0.1:6379:6379"  # Seulement accessible localement
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -42,9 +42,6 @@ services:
   web:
     build: .
     container_name: artci_e_reunion
-    # ✅ SOLUTION: Utiliser SEULEMENT le script d'entrée (pas de command override)
-    # Le script d'entrée gère tout : migrations, collectstatic, superuser, et gunicorn
-    
     environment:
       DEBUG: ${DEBUG:-False}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-this}
@@ -64,17 +61,22 @@ services:
       EMAIL_HOST_PASSWORD: "Admin/QR25"
       DEFAULT_FROM_EMAIL: qrmeeting@artci.ci
 
-      
-      # Site configuration pour IP publique
+      # Site configuration pour HTTPS
       SITE_NAME: "Plateforme e-REUNION ARTCI"
       TITLE_PREFIX: "eREUNION"
-      SITE_PORT: ""  # Pas de port dans l'URL publique
-      SITE_PROTOCOL: "http://"
-      SITE_ADDRESS: "196.216.227.105"  # IP publique
+      SITE_PORT: ""
+      SITE_PROTOCOL: "https://"
+      SITE_ADDRESS: "www.meeting.artci.ci"
       DEFAULT_LIST_SIZE: "10"
       
-      # IMPORTANT: Autoriser l'IP publique et locale
-      ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105,artci.ci"
+      # IMPORTANT: Autoriser tous les hôtes nécessaires
+      ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105,meeting.artci.ci,www.meeting.artci.ci"
+      
+      # Configuration SSL/HTTPS
+      SECURE_SSL_REDIRECT: "True"
+      SECURE_PROXY_SSL_HEADER: "True"
+      SESSION_COOKIE_SECURE: "True"
+      CSRF_COOKIE_SECURE: "True"
       
       # Variables pour le superutilisateur
       CREATE_SUPERUSER: "true"
@@ -88,8 +90,7 @@ services:
       - ./logs:/app/logs
       - staticfiles_volume:/app/staticfiles
     ports:
-      # ✅ CORRECTION: Exposer sur toutes les interfaces pour l'IP publique
-      - "0.0.0.0:80:80"  # Accessible depuis l'IP publique
+      - "127.0.0.1:8000:80"
     depends_on:
       db:
         condition: service_healthy
@@ -99,7 +100,27 @@ services:
       - edcp_network
     restart: unless-stopped
 
-# Volumes pour la persistance des données
+  # NGINX (REVERSE PROXY avec SSL)
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: artci_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./staticfiles:/staticfiles:ro
+      - ./media:/media:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - web
+    networks:
+      - edcp_network
+    restart: unless-stopped
+
+# Volumes
 volumes:
   pgdata:
     driver: local
@@ -107,13 +128,8 @@ volumes:
     driver: local
   staticfiles_volume:
     driver: local
-  uploads_volume:
-    driver: local
-  static_dev_volume:
-    driver: local
-  
 
-# Réseau isolé pour la communication entre services
+# Réseau
 networks:
   edcp_network:
     driver: bridge
