@@ -32,23 +32,6 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# DEBUG = True
-
-# ✅ CORRECTION PRINCIPALE: ALLOWED_HOSTS avec toutes les IPs qui vous accèdent
-"""
-ALLOWED_HOSTS = [
-    "127.0.0.1", 
-    "localhost", 
-    "meeting.artci.ci",
-    "www.meeting.artci.ci",
-    "196.216.227.105",  # IP publique serveur
-    "172.16.0.153",     # IP locale serveur
-    "196.216.227.181",  # IP qui accède depuis les logs
-    "192.168.102.131",  # IP qui accède depuis les logs
-    "0.0.0.0",          # Pour Docker
-    "*"                 # Temporaire pour debug (RETIREZ EN PRODUCTION)
-]
-"""
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', "meeting.artci.ci", "www.meeting.artci.ci"]
 
@@ -68,8 +51,8 @@ def get_site_url(request=None):
         return f"{protocol}://{host}"
     else:
         # Fallback pour les contextes sans request
-        protocol = os.environ.get('SITE_PROTOCOL', 'http://')
-        address = os.environ.get('SITE_ADDRESS', '196.216.227.105')
+        protocol = os.environ.get('SITE_PROTOCOL', 'https')
+        address = os.environ.get('SITE_ADDRESS', 'www.meeting.artci.ci')
         port = os.environ.get('SITE_PORT', ':80')
         return f"{protocol}{address}{port}"
 
