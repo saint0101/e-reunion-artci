@@ -36,9 +36,12 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', "meeting.artci.ci", "www.meeting.artci.ci"]
 
 
-CSRF_TRUSTED_ORIGINS = ["http://meeting.artci.ci", "https://meeting.artci.ci",
-                        "http://www.meeting.artci.ci", "https://www.meeting.artci.ci"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://meeting.artci.ci",
+    "https://www.meeting.artci.ci",
+]
 
+USE_X_FORWARDED_HOST = True
 
 # ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', '*']
 
