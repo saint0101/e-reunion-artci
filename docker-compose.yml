@@ -90,8 +90,8 @@ services:
       - ./static:/app/static
       - ./logs:/app/logs
       - staticfiles_volume:/app/staticfiles
-    #ports:
-    #  - "8000:8000"
+    ports:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
