@@ -86,7 +86,7 @@ class Reunion(models.Model):
         
              # ✅ CORRECTION: Utiliser l'IP publique configurée
             site_protocol = getattr(settings, 'SITE_PROTOCOL', 'http://')
-            site_address = getattr(settings, 'SITE_ADDRESS', '196.216.227.105')
+            site_address = getattr(settings, 'SITE_ADDRESS', 'www.meeting.artci.ci')
             site_port = getattr(settings, 'SITE_PORT', '')
             
             # Construire l'URL de base

@@ -54,9 +54,9 @@ def get_site_url(request=None):
         return f"{protocol}://{host}"
     else:
         # Fallback pour les contextes sans request
-        protocol = os.environ.get('SITE_PROTOCOL', 'https')
+        protocol = os.environ.get('SITE_PROTOCOL', 'https://')
         address = os.environ.get('SITE_ADDRESS', 'www.meeting.artci.ci')
-        port = os.environ.get('SITE_PORT', ':80')
+        port = os.environ.get('SITE_PORT', '')
         return f"{protocol}{address}{port}"
 
 SITE_URL = get_site_url()
