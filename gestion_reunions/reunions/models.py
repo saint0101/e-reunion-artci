@@ -136,45 +136,6 @@ class Reunion(models.Model):
             import traceback
             traceback.print_exc()  # Debug détaillé
 
-    """def generate_qr_code(self):
-        Génère le QR code pour cette réunion
-        try:
-            # URL complète pour le QR code
-            qr_url = f"http://172.20.10.2:8000/presence/{self.qr_code_uuid}/"
-            
-            # Créer le QR code
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(qr_url)
-            qr.make(fit=True)
-            
-            # Créer l'image
-            qr_image = qr.make_image(fill_color="black", back_color="white")
-            
-            # Sauvegarder dans un buffer
-            buffer = BytesIO()
-            qr_image.save(buffer, format='PNG')
-            buffer.seek(0)
-            
-            # Sauvegarder le fichier
-            filename = f'qr_reunion_{self.id}_{self.qr_code_uuid.hex[:8]}.png'
-            self.qr_code_image.save(
-                filename,
-                File(buffer),
-                save=False
-            )
-            
-            # Sauvegarder seulement le champ image
-            super().save(update_fields=['qr_code_image'])
-            
-        except Exception as e:
-            print(f"Erreur lors de la génération du QR code: {e}")  """
-    
-
     
     def get_absolute_url(self):
         return reverse('reunion_detail', args=[str(self.id)])
