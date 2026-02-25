@@ -161,18 +161,6 @@ TIME_ZONE = 'Africa/Abidjan'
 USE_I18N = True
 USE_TZ = True
 
-# ✅ CORRECTION: Configuration des fichiers statiques
-#STATIC_URL = '/static/'
-#STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-
-# ✅ VÉRIFICATION: Créer le dossier static s'il n'existe pas
-#static_dir = BASE_DIR / 'static'
-#if not static_dir.exists():
-#    static_dir.mkdir(parents=True, exist_ok=True)
-
-#STATICFILES_DIRS = [static_dir]
-
 # Configuration pour servir les fichiers statiques avec WhiteNoise
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
@@ -189,28 +177,8 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Media files
-#MEDIA_URL = '/media/'
-#MEDIA_ROOT = BASE_DIR / 'media'
-
-
-# Créer les dossiers média s'ils n'existent pas
-#os.makedirs(MEDIA_ROOT, exist_ok=True)
-#os.makedirs(MEDIA_ROOT / 'qr_codes', exist_ok=True)
-#os.makedirs(MEDIA_ROOT / 'comptes_rendus', exist_ok=True)
-
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# EMAIL CONFIGURATION gmail
-
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-# EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-# EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-# DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 # Configuration EMAIL pour Office 365 ARTCI 
 """
@@ -245,7 +213,7 @@ EMAIL_SSL_CERTFILE = None
 # CUSTOM SETTINGS
 SITE_NAME = os.environ.get('SITE_NAME', 'Plateforme QR Meeting ARTCI')
 TITLE_PREFIX = os.environ.get('TITLE_PREFIX', 'QRMeeting')
-SITE_PORT = os.environ.get('SITE_PORT', ':80')
+SITE_PORT = os.environ.get('SITE_PORT', '')
 SITE_PROTOCOL = os.environ.get('SITE_PROTOCOL', 'http://')
 DEFAULT_LIST_SIZE = int(os.environ.get('DEFAULT_LIST_SIZE', 10))
 
