@@ -85,8 +85,8 @@ class Reunion(models.Model):
             from django.conf import settings
         
              # ✅ CORRECTION: Utiliser l'IP publique configurée
-            site_protocol = getattr(settings, 'SITE_PROTOCOL', 'http://')
-            site_address = getattr(settings, 'SITE_ADDRESS', 'www.meeting.artci.ci')
+            site_protocol = getattr(settings, 'SITE_PROTOCOL', 'https://')
+            site_address = getattr(settings, 'SITE_ADDRESS', 'meeting.artci.ci')
             site_port = getattr(settings, 'SITE_PORT', '')
             
             # Construire l'URL de base
