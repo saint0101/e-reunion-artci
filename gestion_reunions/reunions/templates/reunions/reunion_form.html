@@ -1,117 +1,182 @@
 {% extends 'reunions/base.html' %}
 
 {% block title %}
-{% if reunion %}Modifier Réunion{% else %}Nouvelle Réunion{% endif %}
+{% if reunion %}Modifier la Réunion{% else %}Nouvelle Réunion{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="fas fa-calendar-{% if reunion %}edit{% else %}plus{% endif %} text-primary fa-lg"></i>
                 <h4 class="mb-0">
-                    <i class="fas fa-calendar-plus me-2 text-primary"></i>
                     {% if reunion %}Modifier la Réunion{% else %}Créer une Nouvelle Réunion{% endif %}
                 </h4>
             </div>
             <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="{{ form.titre.id_for_label }}" class="form-label">
-                                <i class="fas fa-heading me-1"></i>Titre de la Réunion *
-                            </label>
-                            {{ form.titre }}
-                            {% if form.titre.errors %}
-                                <div class="text-danger mt-1">{{ form.titre.errors.0 }}</div>
-                            {% endif %}
-                        </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Titre -->
+                    <div class="mb-3">
+                        <label for="{{ form.titre.id_for_label }}" class="form-label fw-semibold">
+                            <i class="fas fa-heading me-1 text-primary"></i>Titre de la Réunion <span class="text-danger">*</span>
+                        </label>
+                        {{ form.titre }}
+                        {% if form.titre.errors %}
+                            <div class="text-danger small mt-1">{{ form.titre.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Dates -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.date_debut.id_for_label }}" class="form-label">
-                                <i class="fas fa-calendar-day me-1"></i>Date de Début *
+                            <label for="{{ form.date_debut.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-calendar-day me-1 text-primary"></i>Date de Début <span class="text-danger">*</span>
                             </label>
                             {{ form.date_debut }}
                             {% if form.date_debut.errors %}
-                                <div class="text-danger mt-1">{{ form.date_debut.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.date_debut.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.date_fin.id_for_label }}" class="form-label">
-                                <i class="fas fa-calendar-day me-1"></i>Date de Fin *
+                            <label for="{{ form.date_fin.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-calendar-day me-1 text-primary"></i>Date de Fin <span class="text-danger">*</span>
                             </label>
                             {{ form.date_fin }}
                             {% if form.date_fin.errors %}
-                                <div class="text-danger mt-1">{{ form.date_fin.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.date_fin.errors.0 }}</div>
                             {% endif %}
                         </div>
                     </div>
-                    
+
+                    <!-- Lieu + Secrétaire -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.lieu.id_for_label }}" class="form-label">
-                                <i class="fas fa-map-marker-alt me-1"></i>Lieu *
+                            <label for="{{ form.lieu.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-map-marker-alt me-1 text-primary"></i>Lieu <span class="text-danger">*</span>
                             </label>
                             {{ form.lieu }}
                             {% if form.lieu.errors %}
-                                <div class="text-danger mt-1">{{ form.lieu.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.lieu.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.secretaire.id_for_label }}" class="form-label">
-                                <i class="fas fa-user-edit me-1"></i>Secrétaire
+                            <label for="{{ form.secretaire.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-user-edit me-1 text-primary"></i>Secrétaire
                             </label>
                             {{ form.secretaire }}
                             {% if form.secretaire.errors %}
-                                <div class="text-danger mt-1">{{ form.secretaire.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.secretaire.errors.0 }}</div>
                             {% endif %}
                         </div>
                     </div>
-                    
+
+                    <!-- Description -->
                     <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">
-                            <i class="fas fa-align-left me-1"></i>Description
+                        <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                            <i class="fas fa-align-left me-1 text-primary"></i>Description
                         </label>
                         {{ form.description }}
                         {% if form.description.errors %}
-                            <div class="text-danger mt-1">{{ form.description.errors.0 }}</div>
+                            <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
                         {% endif %}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.status.id_for_label }}" class="form-label">
-                            <i class="fas fa-flag me-1"></i>Statut
+
+                    <!-- Statut (édition uniquement) -->
+                    {% if reunion %}
+                    <div class="mb-4">
+                        <label for="{{ form.status.id_for_label }}" class="form-label fw-semibold">
+                            <i class="fas fa-flag me-1 text-primary"></i>Statut
                         </label>
                         {{ form.status }}
                         {% if form.status.errors %}
-                            <div class="text-danger mt-1">{{ form.status.errors.0 }}</div>
+                            <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
                         {% endif %}
+                        <div class="form-text text-muted">
+                            Vous pouvez aussi changer le statut directement depuis la page de détail.
+                        </div>
                     </div>
-                    
+                    {% endif %}
+
+                    <!-- Erreurs globales -->
                     {% if form.non_field_errors %}
                         <div class="alert alert-danger">
-                            {{ form.non_field_errors }}
+                            {% for error in form.non_field_errors %}
+                                <div><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
                         </div>
                     {% endif %}
-                    
-                    <div class="d-flex justify-content-between">
+
+                    <!-- Boutons -->
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        {% if reunion %}
+                        <a href="{% url 'reunion_detail' reunion.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                        {% else %}
                         <a href="{% url 'reunion_list' %}" class="btn btn-outline-secondary">
                             <i class="fas fa-arrow-left me-2"></i>Retour
                         </a>
-                        <button type="submit" class="btn btn-primary">
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary px-4">
                             <i class="fas fa-save me-2"></i>
-                            {% if reunion %}Mettre à Jour{% else %}Créer{% endif %}
+                            {% if reunion %}Mettre à Jour{% else %}Créer la Réunion{% endif %}
                         </button>
                     </div>
                 </form>
             </div>
         </div>
+
+        {% if reunion %}
+        <!-- Aperçu rapide des infos actuelles -->
+        <div class="card mt-3 border-0 bg-light">
+            <div class="card-body py-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Réunion créée le {{ reunion.created_at|date:"d/m/Y à H:i" }} —
+                    Dernière modification le {{ reunion.updated_at|date:"d/m/Y à H:i" }}
+                </small>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<script>
+// Validation côté client : date_fin > date_debut
+(function () {
+    const startInput = document.getElementById('{{ form.date_debut.id_for_label }}');
+    const endInput   = document.getElementById('{{ form.date_fin.id_for_label }}');
+    if (!startInput || !endInput) return;
+
+    function validateDates() {
+        if (startInput.value && endInput.value) {
+            if (endInput.value <= startInput.value) {
+                endInput.setCustomValidity('La date de fin doit être postérieure à la date de début.');
+            } else {
+                endInput.setCustomValidity('');
+            }
+        }
+    }
+
+    // Quand la date de début change, mettre la date de fin minimum
+    startInput.addEventListener('change', function () {
+        endInput.min = this.value;
+        validateDates();
+    });
+    endInput.addEventListener('change', validateDates);
+})();
+</script>
 {% endblock %}

@@ -19,6 +19,7 @@ urlpatterns = [
     path('presence/<uuid:uuid>/', views.presence_qr_redirect, name='presence_qr_redirect'),
     path('presence/<uuid:uuid>/form/', views.presence_form, name='presence_form'),
     path('presence/<uuid:uuid>/external/', views.presence_external_form, name='presence_external_form'),
+    path('presence/<uuid:uuid>/artci-fallback/', views.presence_artci_fallback_form, name='presence_artci_fallback_form'),
     path('cancel/<uuid:token>/', views.presence_cancel, name='presence_cancel'),
     path('presence/status/<uuid:token>/', views.presence_status, name='presence_status'),
     

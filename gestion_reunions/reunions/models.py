@@ -17,6 +17,7 @@ class CustomUser(AbstractUser):
     )
     role = models.CharField(max_length=20, choices=ROLES, default='participant')
     phone = models.CharField(max_length=15, blank=True)
+    must_change_password = models.BooleanField(default=False, help_text="Force le changement de mot de passe à la prochaine connexion")
     
     # Résoudre les conflits de reverse accessor
     groups = models.ManyToManyField(

@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.timezone import localtime
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -63,23 +64,32 @@ class ReunionForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Limiter les secrétaires aux utilisateurs avec le bon rôle
         self.fields['secretaire'].queryset = CustomUser.objects.filter(role='secretary')
         self.fields['secretaire'].empty_label = "Sélectionner un secrétaire"
         self.fields['secretaire'].required = False
-    
+
+        # Pré-remplir les dates au format datetime-local (YYYY-MM-DDTHH:MM)
+        # quand on édite une réunion existante
+        if self.instance and self.instance.pk:
+            if self.instance.date_debut:
+                self.initial['date_debut'] = localtime(self.instance.date_debut).strftime('%Y-%m-%dT%H:%M')
+            if self.instance.date_fin:
+                self.initial['date_fin'] = localtime(self.instance.date_fin).strftime('%Y-%m-%dT%H:%M')
+
     def clean(self):
         cleaned_data = super().clean()
         date_debut = cleaned_data.get('date_debut')
         date_fin = cleaned_data.get('date_fin')
-        
+
         if date_debut and date_fin:
             if date_debut >= date_fin:
                 raise ValidationError("La date de fin doit être postérieure à la date de début.")
-            
-            if date_debut < timezone.now():
+
+            # Vérifier la date dans le passé seulement à la création
+            is_new = not (self.instance and self.instance.pk)
+            if is_new and date_debut < timezone.now():
                 raise ValidationError("La date de début ne peut pas être dans le passé.")
-        
+
         return cleaned_data
     
 class CompteRenduForm(forms.ModelForm):
@@ -295,3 +305,20 @@ class PresenceValidationForm(forms.Form):
             'placeholder': 'Votre téléphone (optionnel)'
         })
     )
+
+
+class PresenceARTCIFallbackForm(PresenceDirectForm):
+    """
+    Formulaire pour les agents ARTCI non trouvés dans l'Active Directory.
+    Identique à PresenceDirectForm mais autorise les emails @artci.ci.
+    """
+
+    def clean_email(self):
+        return self.cleaned_data['email'].lower()
+
+    def clean_contact(self):
+        contact = self.cleaned_data['contact']
+        import re
+        if not re.match(r'^[\d\s\-\+\(\)\.]+$', contact):
+            raise ValidationError("Format de numéro de téléphone invalide.")
+        return contact

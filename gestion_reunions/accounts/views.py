@@ -1,15 +1,39 @@
 # accounts/views.py (version complète)
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from reunions.models import CustomUser
 from reunions.forms import CustomUserCreationForm
 
-
 from django.contrib.auth import logout
+
+@login_required
+def password_change_required(request):
+    """
+    Changement de mot de passe obligatoire à la première connexion.
+    Appelé automatiquement par ForcePasswordChangeMiddleware.
+    """
+    if not request.user.must_change_password:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            user.must_change_password = False
+            user.save(update_fields=['must_change_password'])
+            update_session_auth_hash(request, user)
+            messages.success(request, "Votre mot de passe a été mis à jour avec succès.")
+            return redirect('dashboard')
+    else:
+        form = PasswordChangeForm(user=request.user)
+
+    return render(request, 'accounts/password_change_required.html', {'form': form})
+
 
 @login_required
 def logout_view(request):
@@ -119,8 +143,11 @@ def user_create(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            messages.success(request, f'Utilisateur {user.username} créé avec succès!')
+            user = form.save(commit=False)
+            user.must_change_password = True
+            user.save()
+            form.save_m2m()
+            messages.success(request, f'Utilisateur {user.username} créé avec succès. Il devra changer son mot de passe à la première connexion.')
             return redirect('user_list')
     else:
         form = CustomUserCreationForm()

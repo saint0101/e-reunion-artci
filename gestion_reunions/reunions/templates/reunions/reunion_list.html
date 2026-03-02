@@ -5,8 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">
-        <i class="fas fa-calendar-alt text-primary me-2"></i>
-        Liste des Réunions
+        <i class="fas fa-calendar-alt text-primary me-2"></i>Liste des Réunions
     </h1>
     {% if user.role == 'admin' or user.role == 'secretary' %}
     <a href="{% url 'reunion_create' %}" class="btn btn-primary">
@@ -19,16 +18,16 @@
     <div class="card-body p-0">
         {% if reunions %}
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead class="bg-light">
                     <tr>
                         <th>Titre</th>
                         <th>Date</th>
                         <th>Lieu</th>
                         <th>Organisateur</th>
-                        <th>Participants</th>
-                        <th>Statut</th>
-                        <th>Actions</th>
+                        <th class="text-center">Participants</th>
+                        <th class="text-center">Statut</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,39 +35,92 @@
                     <tr>
                         <td>
                             <div class="fw-bold">{{ reunion.titre }}</div>
-                            <small class="text-muted">{{ reunion.description|truncatewords:10 }}</small>
+                            <small class="text-muted">{{ reunion.description|truncatewords:8 }}</small>
                         </td>
                         <td>
                             <div>{{ reunion.date_debut|date:"d/m/Y" }}</div>
-                            <small class="text-muted">{{ reunion.date_debut|date:"H:i" }} - {{ reunion.date_fin|date:"H:i" }}</small>
+                            <small class="text-muted">{{ reunion.date_debut|date:"H:i" }} → {{ reunion.date_fin|date:"H:i" }}</small>
                         </td>
                         <td>{{ reunion.lieu }}</td>
-                        <td>{{ reunion.organisateur.first_name }} {{ reunion.organisateur.last_name }}</td>
-                        <td>
+                        <td>{{ reunion.organisateur.get_full_name|default:reunion.organisateur.username }}</td>
+                        <td class="text-center">
                             <span class="badge bg-primary rounded-pill">
                                 {{ reunion.presence_requests.count }}
                             </span>
                         </td>
-                        <td>
-                            {% if reunion.status == 'planned' %}
-                                <span class="badge bg-warning">Planifiée</span>
-                            {% elif reunion.status == 'ongoing' %}
-                                <span class="badge bg-success">En cours</span>
-                            {% elif reunion.status == 'finished' %}
-                                <span class="badge bg-info">Terminée</span>
-                            {% elif reunion.status == 'cancelled' %}
-                                <span class="badge bg-danger">Annulée</span>
+                        <td class="text-center">
+                            {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                            <!-- Dropdown changement de statut rapide -->
+                            <div class="dropdown">
+                                <button class="btn btn-sm dropdown-toggle border-0
+                                    {% if reunion.status == 'planned' %}btn-warning
+                                    {% elif reunion.status == 'ongoing' %}btn-success
+                                    {% elif reunion.status == 'finished' %}btn-info
+                                    {% elif reunion.status == 'cancelled' %}btn-danger
+                                    {% endif %}"
+                                    type="button" data-bs-toggle="dropdown"
+                                    title="Cliquer pour changer le statut">
+                                    {% if reunion.status == 'planned' %}Planifiée
+                                    {% elif reunion.status == 'ongoing' %}En cours
+                                    {% elif reunion.status == 'finished' %}Terminée
+                                    {% elif reunion.status == 'cancelled' %}Annulée
+                                    {% endif %}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item status-link {% if reunion.status == 'planned' %}active{% endif %}"
+                                           href="#" data-pk="{{ reunion.pk }}" data-status="planned">
+                                            <i class="fas fa-clock me-2 text-warning"></i>Planifiée
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item status-link {% if reunion.status == 'ongoing' %}active{% endif %}"
+                                           href="#" data-pk="{{ reunion.pk }}" data-status="ongoing">
+                                            <i class="fas fa-play me-2 text-success"></i>En cours
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item status-link {% if reunion.status == 'finished' %}active{% endif %}"
+                                           href="#" data-pk="{{ reunion.pk }}" data-status="finished">
+                                            <i class="fas fa-check me-2 text-info"></i>Terminée
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item status-link {% if reunion.status == 'cancelled' %}active{% endif %}"
+                                           href="#" data-pk="{{ reunion.pk }}" data-status="cancelled">
+                                            <i class="fas fa-ban me-2 text-danger"></i>Annulée
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            {% else %}
+                            <!-- Lecture seule -->
+                            <span class="badge
+                                {% if reunion.status == 'planned' %}bg-warning text-dark
+                                {% elif reunion.status == 'ongoing' %}bg-success
+                                {% elif reunion.status == 'finished' %}bg-info
+                                {% elif reunion.status == 'cancelled' %}bg-danger
+                                {% endif %}">
+                                {% if reunion.status == 'planned' %}Planifiée
+                                {% elif reunion.status == 'ongoing' %}En cours
+                                {% elif reunion.status == 'finished' %}Terminée
+                                {% elif reunion.status == 'cancelled' %}Annulée
+                                {% endif %}
+                            </span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="text-center">
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'reunion_detail' reunion.pk %}" class="btn btn-outline-primary" title="Voir">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                {% if user.role == 'admin' or reunion.organisateur == user %}
+                                {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
                                 <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-secondary" title="Modifier">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                {% endif %}
+                                {% if user.role == 'admin' or reunion.organisateur == user %}
                                 <a href="{% url 'reunion_delete' reunion.pk %}" class="btn btn-outline-danger" title="Supprimer">
                                     <i class="fas fa-trash"></i>
                                 </a>
@@ -80,6 +132,33 @@
                 </tbody>
             </table>
         </div>
+
+        {% if is_paginated %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
         {% else %}
         <div class="text-center py-5">
             <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
@@ -94,4 +173,69 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Toast de feedback -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="statusToast" class="toast align-items-center border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage"></div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+const STATUS_CONFIG = {
+    planned:   { label: 'Planifiée',  btnCls: 'btn-warning',  textCls: 'bg-warning text-dark' },
+    ongoing:   { label: 'En cours',   btnCls: 'btn-success',  textCls: 'bg-success' },
+    finished:  { label: 'Terminée',   btnCls: 'btn-info',     textCls: 'bg-info' },
+    cancelled: { label: 'Annulée',    btnCls: 'btn-danger',   textCls: 'bg-danger' },
+};
+
+const toastEl  = document.getElementById('statusToast');
+const toastMsg = document.getElementById('toastMessage');
+const toast    = new bootstrap.Toast(toastEl, { delay: 3000 });
+
+function showToast(message, ok) {
+    toastEl.className = 'toast align-items-center border-0 text-white ' + (ok ? 'bg-success' : 'bg-danger');
+    toastMsg.textContent = message;
+    toast.show();
+}
+
+document.querySelectorAll('.status-link').forEach(link => {
+    link.addEventListener('click', function (e) {
+        e.preventDefault();
+        const pk        = this.dataset.pk;
+        const newStatus = this.dataset.status;
+        const row       = this.closest('tr');
+        const dropBtn   = row.querySelector('.dropdown-toggle');
+
+        fetch(`/api/reunion/${pk}/status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: 'status=' + newStatus,
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const cfg = STATUS_CONFIG[data.new_status];
+                // Mettre à jour le bouton dropdown
+                dropBtn.className = `btn btn-sm dropdown-toggle border-0 ${cfg.btnCls}`;
+                dropBtn.textContent = cfg.label;
+                // Marquer l'item actif
+                row.querySelectorAll('.status-link').forEach(l => {
+                    l.classList.toggle('active', l.dataset.status === data.new_status);
+                });
+                showToast('Statut mis à jour : ' + cfg.label, true);
+            } else {
+                showToast(data.error || 'Erreur lors de la mise à jour.', false);
+            }
+        })
+        .catch(() => showToast('Erreur réseau. Veuillez réessayer.', false));
+    });
+});
+</script>
 {% endblock %}

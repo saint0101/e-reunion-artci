@@ -3,37 +3,50 @@
 {% block title %}{{ reunion.titre }}{% endblock %}
 
 {% block content %}
+
+{% with can_manage=False %}
+{% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+{% with can_manage=True %}
+{% endif %}
+
 <div class="row">
     <div class="col-lg-8">
+        <!-- Carte principale -->
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h4 class="mb-0">
                     <i class="fas fa-calendar-alt me-2 text-primary"></i>
                     {{ reunion.titre }}
                 </h4>
-                {% if reunion.status == 'planned' %}
-                    <span class="badge bg-warning fs-6">Planifiée</span>
-                {% elif reunion.status == 'ongoing' %}
-                    <span class="badge bg-success fs-6">En cours</span>
-                {% elif reunion.status == 'finished' %}
-                    <span class="badge bg-info fs-6">Terminée</span>
-                {% elif reunion.status == 'cancelled' %}
-                    <span class="badge bg-danger fs-6">Annulée</span>
-                {% endif %}
+                <span id="status-badge" class="badge fs-6
+                    {% if reunion.status == 'planned' %}bg-warning text-dark
+                    {% elif reunion.status == 'ongoing' %}bg-success
+                    {% elif reunion.status == 'finished' %}bg-info
+                    {% elif reunion.status == 'cancelled' %}bg-danger
+                    {% endif %}">
+                    {% if reunion.status == 'planned' %}<i class="fas fa-clock me-1"></i>Planifiée
+                    {% elif reunion.status == 'ongoing' %}<i class="fas fa-play me-1"></i>En cours
+                    {% elif reunion.status == 'finished' %}<i class="fas fa-check me-1"></i>Terminée
+                    {% elif reunion.status == 'cancelled' %}<i class="fas fa-ban me-1"></i>Annulée
+                    {% endif %}
+                </span>
             </div>
             <div class="card-body">
+                <!-- Infos réunion -->
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6><i class="fas fa-calendar text-primary me-2"></i>Date et Heure</h6>
-                        <p>Du {{ reunion.date_debut|date:"d/m/Y à H:i" }}<br>
-                           au {{ reunion.date_fin|date:"d/m/Y à H:i" }}</p>
+                        <p>Du <strong>{{ reunion.date_debut|date:"d/m/Y à H:i" }}</strong><br>
+                           au <strong>{{ reunion.date_fin|date:"d/m/Y à H:i" }}</strong>
+                           <span class="text-muted ms-2">({{ reunion.get_duration }})</span>
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <h6><i class="fas fa-map-marker-alt text-primary me-2"></i>Lieu</h6>
                         <p>{{ reunion.lieu }}</p>
                     </div>
                 </div>
-                
+
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6><i class="fas fa-user text-primary me-2"></i>Organisateur</h6>
@@ -46,31 +59,82 @@
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="mb-4">
                     <h6><i class="fas fa-align-left text-primary me-2"></i>Description</h6>
                     <p>{{ reunion.description|linebreaks }}</p>
                 </div>
-                
-                {% if user.role == 'admin' or reunion.organisateur == user %}
-                <div class="d-flex gap-2">
-                    <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-primary">
-                        <i class="fas fa-edit me-2"></i>Modifier
-                    </a>
-                    <a href="{% url 'reunion_delete' reunion.pk %}" class="btn btn-outline-danger">
-                        <i class="fas fa-trash me-2"></i>Supprimer
-                    </a>
+
+                <!-- Actions admin/organisateur/secrétaire -->
+                {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                <div class="border-top pt-3">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if user.role == 'admin' or reunion.organisateur == user %}
+                        <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-2"></i>Modifier
+                        </a>
+                        <a href="{% url 'reunion_delete' reunion.pk %}" class="btn btn-outline-danger">
+                            <i class="fas fa-trash me-2"></i>Supprimer
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endif %}
             </div>
         </div>
-        
-        <!-- Liste des Présences MISE À JOUR -->
+
+        <!-- ─── Changement de statut ─────────────────────────────── -->
+        {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+        <div class="card mt-4" id="status-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exchange-alt me-2 text-primary"></i>Changer le statut
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Statut actuel :
+                    <strong id="current-status-text">
+                        {% if reunion.status == 'planned' %}Planifiée
+                        {% elif reunion.status == 'ongoing' %}En cours
+                        {% elif reunion.status == 'finished' %}Terminée
+                        {% elif reunion.status == 'cancelled' %}Annulée
+                        {% endif %}
+                    </strong>
+                </p>
+                <div class="d-flex flex-wrap gap-2" id="status-buttons">
+                    <button class="btn btn-warning btn-status {% if reunion.status == 'planned' %}active fw-bold{% endif %}"
+                            data-status="planned"
+                            {% if reunion.status == 'planned' %}disabled{% endif %}>
+                        <i class="fas fa-clock me-1"></i>Planifiée
+                    </button>
+                    <button class="btn btn-success btn-status {% if reunion.status == 'ongoing' %}active fw-bold{% endif %}"
+                            data-status="ongoing"
+                            {% if reunion.status == 'ongoing' %}disabled{% endif %}>
+                        <i class="fas fa-play me-1"></i>En cours
+                    </button>
+                    <button class="btn btn-info btn-status {% if reunion.status == 'finished' %}active fw-bold{% endif %}"
+                            data-status="finished"
+                            {% if reunion.status == 'finished' %}disabled{% endif %}>
+                        <i class="fas fa-check me-1"></i>Terminée
+                    </button>
+                    <button class="btn btn-danger btn-status {% if reunion.status == 'cancelled' %}active fw-bold{% endif %}"
+                            data-status="cancelled"
+                            {% if reunion.status == 'cancelled' %}disabled{% endif %}>
+                        <i class="fas fa-ban me-1"></i>Annulée
+                    </button>
+                </div>
+                <div id="status-feedback" class="mt-2" style="display:none;"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Participants -->
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-users me-2"></i>
-                    Participants ({{ presences.count }})
+                    Participants (<span id="participants-count">{{ presences.count }}</span>)
                 </h5>
                 {% if user.role == 'admin' or user.role == 'secretary' %}
                 <div class="dropdown">
@@ -132,84 +196,37 @@
                                 <td>
                                     {% if presence.contact %}
                                         <a href="tel:{{ presence.contact }}" class="text-decoration-none">
-                                            <i class="fas fa-phone text-success me-1"></i>
-                                            {{ presence.contact }}
+                                            <i class="fas fa-phone text-success me-1"></i>{{ presence.contact }}
                                         </a>
-                                    {% else %}
-                                        —
-                                    {% endif %}
+                                    {% else %}—{% endif %}
                                 </td>
                                 <td>
                                     <a href="mailto:{{ presence.email }}" class="text-decoration-none">
                                         <i class="fas fa-envelope text-primary me-1"></i>
                                         {{ presence.email|truncatechars:25 }}
-                                    </a>
-                                    <br>
-                                    <small class="text-muted">
-                                        {{ presence.confirmed_at|date:"d/m/Y H:i" }}
-                                    </small>
+                                    </a><br>
+                                    <small class="text-muted">{{ presence.confirmed_at|date:"d/m/Y H:i" }}</small>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                
-                <!-- Résumé des participants 
-                <div class="card-footer bg-light">
-                    <div class="row text-center">
-                        <div class="col-md-4">
-                            <div class="border-end">
-                                <h6 class="text-primary mb-1">{{ presences.count }}</h6>
-                                <small class="text-muted">Total Participants</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="border-end">
-                                <h6 class="text-primary mb-1">
-                                    {% with artci_count=presences|length %}
-                                        {% for p in presences %}
-                                            {% if p.is_artci_email %}
-                                                {{ forloop.counter0|add:1 }}
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% endwith %}
-                                </h6>
-                                <small class="text-muted">Employés ARTCI</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="text-secondary mb-1">
-                                {% with external_count=0 %}
-                                    {% for p in presences %}
-                                        {% if not p.is_artci_email %}
-                                            {{ forloop.counter0|add:1 }}
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endwith %}
-                            </h6>
-                            <small class="text-muted">Participants Externes</small>
-                        </div>
-                    </div>
-                </div>-->
                 {% else %}
                 <div class="text-center py-5">
                     <i class="fas fa-user-slash fa-4x text-muted mb-3"></i>
                     <h5 class="text-muted">Aucun participant confirmé</h5>
-                    <p class="text-muted">
-                        Les participants pourront scanner le QR code pour s'inscrire à cette réunion.
-                    </p>
+                    <p class="text-muted">Les participants pourront scanner le QR code pour s'inscrire.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- Comptes-Rendus -->
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="fas fa-file-alt me-2"></i>
-                    Comptes-Rendus
+                    <i class="fas fa-file-alt me-2"></i>Comptes-Rendus
                 </h5>
                 {% if user.role == 'secretary' and reunion.secretaire == user %}
                 <a href="{% url 'compte_rendu_create' reunion.pk %}" class="btn btn-primary btn-sm">
@@ -225,14 +242,14 @@
                         <div>
                             <h6 class="mb-1">{{ cr.titre }} <span class="badge bg-secondary">v{{ cr.version }}</span></h6>
                             <small class="text-muted">
-                                Créé par {{ cr.cree_par.first_name }} {{ cr.cree_par.last_name }} 
+                                Créé par {{ cr.cree_par.first_name }} {{ cr.cree_par.last_name }}
                                 le {{ cr.created_at|date:"d/m/Y à H:i" }}
                             </small>
                             {% if cr.envoye_automatiquement %}
                                 <span class="badge bg-success ms-2">Envoyé</span>
                             {% endif %}
                         </div>
-                        <div>
+                        <div class="d-flex gap-1">
                             <a href="{{ cr.fichier.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
                                 <i class="fas fa-download me-1"></i>Télécharger
                             </a>
@@ -257,16 +274,13 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Sidebar -->
     <div class="col-lg-4">
         <!-- QR Code -->
         <div class="card mb-4">
             <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-qrcode me-2"></i>
-                    QR Code de Présence
-                </h6>
+                <h6 class="mb-0"><i class="fas fa-qrcode me-2"></i>QR Code de Présence</h6>
             </div>
             <div class="card-body text-center">
                 {% if reunion.qr_code_image %}
@@ -277,33 +291,30 @@
                     <p class="text-muted mt-2">QR Code en cours de génération...</p>
                 </div>
                 {% endif %}
-                <p class="text-muted small">
-                    Scanner ce code pour confirmer votre présence
-                </p>
-                <div class="mt-3">
+                <p class="text-muted small">Scanner ce code pour confirmer votre présence</p>
+                <div class="mt-2 d-flex justify-content-center gap-2">
                     <button class="btn btn-outline-primary btn-sm" onclick="printQR()">
-                        <i class="fas fa-print me-2"></i>Imprimer
+                        <i class="fas fa-print me-1"></i>Imprimer
                     </button>
                     <button class="btn btn-outline-secondary btn-sm" onclick="shareQR()">
-                        <i class="fas fa-share me-2"></i>Partager
+                        <i class="fas fa-share me-1"></i>Partager
                     </button>
                 </div>
                 <div class="mt-3">
                     <small class="text-muted">
-                        Lien direct: <br>
-                        <code>{{ request.build_absolute_uri }}presence/{{ reunion.qr_code_uuid }}/</code>
+                        Lien direct :<br>
+                        <code style="font-size:0.75rem; word-break:break-all;">
+                            {{ request.scheme }}://{{ request.get_host }}/presence/{{ reunion.qr_code_uuid }}/
+                        </code>
                     </small>
                 </div>
             </div>
         </div>
-        
-        <!-- Informations rapides -->
+
+        <!-- Statistiques -->
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Statistiques
-                </h6>
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Statistiques</h6>
             </div>
             <div class="card-body">
                 <div class="row text-center">
@@ -318,21 +329,19 @@
                         <small class="text-muted">Comptes-Rendus</small>
                     </div>
                 </div>
-                
                 <hr>
-                
                 <div class="small">
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Créé le:</span>
+                        <span class="text-muted">Créé le :</span>
                         <span>{{ reunion.created_at|date:"d/m/Y" }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Modifié le:</span>
-                        <span>{{ reunion.updated_at|date:"d/m/Y" }}</span>
+                        <span class="text-muted">Modifié le :</span>
+                        <span>{{ reunion.updated_at|date:"d/m/Y H:i" }}</span>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <span>UUID:</span>
-                        <span><code>{{ reunion.qr_code_uuid|slice:":8" }}...</code></span>
+                        <span class="text-muted">Durée :</span>
+                        <span>{{ reunion.get_duration }}</span>
                     </div>
                 </div>
             </div>
@@ -340,61 +349,119 @@
     </div>
 </div>
 
+{% endwith %}
+{% endwith %}
+
 <script>
+// ─── Changement de statut AJAX ────────────────────────────────────────────────
+const STATUS_CONFIG = {
+    planned:   { label: 'Planifiée',  cls: 'bg-warning text-dark' },
+    ongoing:   { label: 'En cours',   cls: 'bg-success' },
+    finished:  { label: 'Terminée',   cls: 'bg-info' },
+    cancelled: { label: 'Annulée',    cls: 'bg-danger' },
+};
+
+document.querySelectorAll('.btn-status').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const newStatus = this.dataset.status;
+        const feedback  = document.getElementById('status-feedback');
+        const badge     = document.getElementById('status-badge');
+        const allBtns   = document.querySelectorAll('.btn-status');
+
+        // Désactiver tous les boutons pendant la requête
+        allBtns.forEach(b => b.disabled = true);
+        feedback.style.display = 'none';
+
+        fetch('{% url "update_reunion_status" reunion.pk %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: 'status=' + newStatus,
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const cfg = STATUS_CONFIG[data.new_status];
+
+                // Mettre à jour le badge
+                badge.className = 'badge fs-6 ' + cfg.cls;
+                badge.innerHTML = cfg.label;
+
+                // Mettre à jour le texte courant
+                document.getElementById('current-status-text').textContent = cfg.label;
+
+                // Réactiver les boutons sauf le nouveau statut actif
+                allBtns.forEach(b => {
+                    b.disabled = (b.dataset.status === data.new_status);
+                    b.classList.toggle('fw-bold', b.dataset.status === data.new_status);
+                });
+
+                // Message de succès
+                feedback.className = 'mt-2 alert alert-success py-2';
+                feedback.textContent = 'Statut mis à jour : ' + cfg.label;
+                feedback.style.display = 'block';
+                setTimeout(() => { feedback.style.display = 'none'; }, 3000);
+            } else {
+                allBtns.forEach(b => { b.disabled = (b.classList.contains('fw-bold')); });
+                feedback.className = 'mt-2 alert alert-danger py-2';
+                feedback.textContent = data.error || 'Erreur lors de la mise à jour.';
+                feedback.style.display = 'block';
+            }
+        })
+        .catch(() => {
+            allBtns.forEach(b => { b.disabled = (b.classList.contains('fw-bold')); });
+            feedback.className = 'mt-2 alert alert-danger py-2';
+            feedback.textContent = 'Erreur réseau. Veuillez réessayer.';
+            feedback.style.display = 'block';
+        });
+    });
+});
+
+// ─── Impression QR ────────────────────────────────────────────────────────────
 function printQR() {
-    const qrImage = document.querySelector('.card img[alt="QR Code"]');
-    if (qrImage) {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>QR Code - {{ reunion.titre }}</title>
-                    <style>
-                        body { text-align: center; font-family: Arial, sans-serif; padding: 20px; }
-                        h1 { color: #FF6B35; }
-                        img { max-width: 300px; border: 2px solid #ddd; padding: 10px; }
-                        .info { margin: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px; }
-                    </style>
-                </head>
-                <body>
-                    <h1>{{ reunion.titre }}</h1>
-                    <div class="info">
-                        <p><strong>Date:</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
-                        <p><strong>Lieu:</strong> {{ reunion.lieu }}</p>
-                        <p><strong>Organisateur:</strong> {{ reunion.organisateur.first_name }} {{ reunion.organisateur.last_name }}</p>
-                    </div>
-                    <img src="${qrImage.src}" alt="QR Code">
-                    <p><strong>Scanner ce code pour confirmer votre présence</strong></p>
-                    <p style="font-size: 12px; color: #666;">
-                        Ou allez sur: {{ request.build_absolute_uri }}/presence/{{ reunion.qr_code_uuid }}/
-                    </p>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-    } else {
-        alert('QR Code non disponible pour l\'impression');
-    }
+    const qrImage = document.querySelector('img[alt="QR Code"]');
+    if (!qrImage) { alert('QR Code non disponible.'); return; }
+    const win = window.open('', '_blank');
+    win.document.write(`
+        <html><head>
+            <title>QR Code - {{ reunion.titre|escapejs }}</title>
+            <style>
+                body { text-align:center; font-family:Arial,sans-serif; padding:20px; }
+                h1 { color:#FF6B35; font-size:1.4rem; }
+                img { max-width:280px; border:2px solid #ddd; padding:10px; border-radius:8px; }
+                .info { margin:16px auto; padding:16px; background:#f8f9fa; border-radius:10px; max-width:400px; text-align:left; }
+                p { margin:4px 0; }
+            </style>
+        </head><body>
+            <h1>{{ reunion.titre|escapejs }}</h1>
+            <div class="info">
+                <p><strong>Date :</strong> {{ reunion.date_debut|date:"d/m/Y à H:i" }}</p>
+                <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+                <p><strong>Organisateur :</strong> {{ reunion.organisateur.first_name }} {{ reunion.organisateur.last_name }}</p>
+            </div>
+            <img src="${qrImage.src}" alt="QR Code">
+            <p style="margin-top:12px;"><strong>Scanner pour confirmer votre présence</strong></p>
+        </body></html>
+    `);
+    win.document.close();
+    win.print();
 }
 
+// ─── Partage QR ───────────────────────────────────────────────────────────────
 function shareQR() {
-    const qrUrl = '{{ request.build_absolute_uri }}/presence/{{ reunion.qr_code_uuid }}/';
-    
+    const url = '{{ request.scheme }}://{{ request.get_host }}/presence/{{ reunion.qr_code_uuid }}/';
     if (navigator.share) {
         navigator.share({
-            title: '{{ reunion.titre }}',
-            text: 'Confirmer votre présence à cette réunion',
-            url: qrUrl
-        }).catch(err => console.log('Erreur partage:', err));
+            title: '{{ reunion.titre|escapejs }}',
+            text: 'Confirmez votre présence à cette réunion',
+            url: url,
+        }).catch(() => {});
     } else {
-        // Fallback: copier dans le presse-papier
-        navigator.clipboard.writeText(qrUrl).then(() => {
-            alert('Lien copié dans le presse-papier!');
-        }).catch(() => {
-            // Fallback pour les navigateurs plus anciens
-            prompt('Copiez ce lien:', qrUrl);
-        });
+        navigator.clipboard.writeText(url)
+            .then(() => alert('Lien copié dans le presse-papier !'))
+            .catch(() => prompt('Copiez ce lien :', url));
     }
 }
 </script>

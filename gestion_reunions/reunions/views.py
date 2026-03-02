@@ -10,7 +10,7 @@ from django.db.models import Count, Q
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
-from .forms import ReunionForm, PresenceForm, CompteRenduForm, PresenceDirectForm, PresenceForm, PresenceValidationForm
+from .forms import ReunionForm, PresenceForm, CompteRenduForm, PresenceDirectForm, PresenceForm, PresenceValidationForm, PresenceARTCIFallbackForm
 from .utils import generate_presence_report, send_compte_rendu_email
 import json
 from email.utils import formataddr
@@ -133,11 +133,16 @@ def reunion_create(request):
 @login_required
 def reunion_update(request, pk):
     reunion = get_object_or_404(Reunion, pk=pk)
-    
-    if request.user.role not in ['admin'] and reunion.organisateur != request.user:
+
+    can_edit = (
+        request.user.role == 'admin'
+        or reunion.organisateur == request.user
+        or reunion.secretaire == request.user
+    )
+    if not can_edit:
         messages.error(request, "Vous n'avez pas les permissions nécessaires.")
         return redirect('reunion_detail', pk=pk)
-    
+
     if request.method == 'POST':
         form = ReunionForm(request.POST, instance=reunion)
         if form.is_valid():
@@ -146,7 +151,7 @@ def reunion_update(request, pk):
             return redirect('reunion_detail', pk=pk)
     else:
         form = ReunionForm(instance=reunion)
-    
+
     return render(request, 'reunions/reunion_form.html', {'form': form, 'reunion': reunion})
 
 @login_required
@@ -553,19 +558,44 @@ def export_data(request):
     return render(request, 'reunions/export_data.html')
 
 # Ajax Views
+STATUS_LABELS = {
+    'planned': 'Planifiée',
+    'ongoing': 'En cours',
+    'finished': 'Terminée',
+    'cancelled': 'Annulée',
+}
+
 @login_required
 def update_reunion_status(request, pk):
     """Mise à jour AJAX du statut d'une réunion"""
-    if request.method == 'POST':
-        reunion = get_object_or_404(Reunion, pk=pk)
-        new_status = request.POST.get('status')
-        
-        if new_status in ['planned', 'ongoing', 'finished', 'cancelled']:
-            reunion.status = new_status
-            reunion.save()
-            return JsonResponse({'success': True})
-    
-    return JsonResponse({'success': False})
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+    reunion = get_object_or_404(Reunion, pk=pk)
+
+    # Vérification des permissions
+    can_change = (
+        request.user.role == 'admin'
+        or reunion.organisateur == request.user
+        or reunion.secretaire == request.user
+    )
+    if not can_change:
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+
+    new_status = request.POST.get('status')
+    if new_status not in STATUS_LABELS:
+        return JsonResponse({'success': False, 'error': 'Statut invalide'}, status=400)
+
+    old_status = reunion.status
+    reunion.status = new_status
+    reunion.save()  # auto_now=True sur updated_at, save() complet requis
+
+    return JsonResponse({
+        'success': True,
+        'old_status': old_status,
+        'new_status': new_status,
+        'new_label': STATUS_LABELS[new_status],
+    })
 
 @login_required
 def send_compte_rendu(request, pk):
@@ -1694,11 +1724,11 @@ def presence_form(request, uuid):
                 user_info = service_ad.get_user_info(email)
 
                 if not user_info:
-                    logger.warning(f"Utilisateur {email} non trouvé dans AD")
-                    messages.error(request,
-                        "Impossible de récupérer vos informations depuis Active Directory. "
-                        "Veuillez vérifier votre email ou contacter l'administrateur.")
-                    return redirect('presence_qr_redirect', uuid=uuid)
+                    logger.warning(f"Utilisateur {email} non trouvé dans AD — redirection vers formulaire manuel")
+                    log_artci_ad_manquant(email)
+                    request.session['artci_fallback_email'] = email
+                    request.session['reunion_uuid'] = str(uuid)
+                    return redirect('presence_artci_fallback_form', uuid=uuid)
 
                 # Normalisation du nom et du prénom
                 prenom = user_info.get('prenom', '').capitalize() if user_info.get('prenom') else ''
@@ -1746,3 +1776,84 @@ def presence_form(request, uuid):
 
     # GET → redirige vers la page QR / consentement
     return redirect('presence_qr_redirect', uuid=uuid)
+
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def log_artci_ad_manquant(email):
+    """Enregistre l'email ARTCI non trouvé dans l'AD dans un fichier de log dédié."""
+    from pathlib import Path
+    from django.conf import settings
+    import datetime
+
+    log_dir = Path(settings.BASE_DIR) / 'logs'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / 'artci_ad_manquants.txt'
+
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(log_file, 'a', encoding='utf-8') as f:
+        f.write(f"{timestamp} | {email}\n")
+    logger.info(f"Email ARTCI non-AD loggé : {email}")
+
+
+# ─── Vue fallback ARTCI non trouvé dans l'AD ─────────────────────────────────
+
+def presence_artci_fallback_form(request, uuid):
+    """
+    Formulaire pour les agents ARTCI dont le compte n'existe pas dans l'AD.
+    Permet de saisir manuellement les informations. L'email est loggé pour
+    mise à jour ultérieure de l'Active Directory.
+    """
+    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
+
+    artci_email = request.session.get('artci_fallback_email')
+    if not artci_email or request.session.get('reunion_uuid') != str(uuid):
+        messages.error(request, "Session expirée. Veuillez recommencer.")
+        return redirect('presence_qr_redirect', uuid=uuid)
+
+    if request.method == 'POST':
+        form = PresenceARTCIFallbackForm(request.POST)
+        if form.is_valid():
+            existing = PresenceRequest.objects.filter(reunion=reunion, email=artci_email).first()
+            if existing:
+                messages.info(request, "Vous êtes déjà enregistré pour cette réunion.")
+                return redirect('presence_status', token=existing.validation_token)
+
+            presence_request = PresenceRequest.objects.create(
+                reunion=reunion,
+                email=artci_email,
+                nom=form.cleaned_data['nom'],
+                prenom=form.cleaned_data['prenom'],
+                organisation=form.cleaned_data.get('organisation', 'ARTCI'),
+                fonction=form.cleaned_data['fonction'],
+                contact=form.cleaned_data['contact'],
+                consent_given=True,
+                status='confirmed',
+                confirmed_at=timezone.now(),
+            )
+
+            send_cancellation_email(presence_request)
+
+            # Nettoyage session
+            request.session.pop('artci_fallback_email', None)
+            request.session.pop('reunion_uuid', None)
+
+            return render(request, 'reunions/presence_confirmed_artci.html', {
+                'reunion': reunion,
+                'presence_request': presence_request,
+                'is_artci': True,
+                'from_ad': False,
+            })
+    else:
+        form = PresenceARTCIFallbackForm(initial={
+            'email': artci_email,
+            'organisation': 'ARTCI',
+        })
+        form.fields['email'].widget.attrs['readonly'] = True
+        form.fields['email'].widget.attrs['style'] = 'background-color: #f8f9fa;'
+
+    return render(request, 'reunions/presence_artci_fallback_form.html', {
+        'form': form,
+        'reunion': reunion,
+        'email': artci_email,
+    })

@@ -105,6 +105,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "accounts.middleware.ForcePasswordChangeMiddleware",
 ]
 
 ROOT_URLCONF = "gestion_reunions.urls"
@@ -219,6 +220,7 @@ DEFAULT_LIST_SIZE = int(os.environ.get('DEFAULT_LIST_SIZE', 10))
 
 # Login/Logout URLs
 LOGIN_URL = '/accounts/login/'
+LOGOUT_URL = '/accounts/logout/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
