@@ -28,17 +28,19 @@ class CustomUserCreationForm(UserCreationForm):
 class ReunionForm(forms.ModelForm):
     date_debut = forms.DateTimeField(
         widget=forms.DateTimeInput(attrs={
-            'type': 'datetime-local', 
-            'class': 'form-control'
+            'type': 'datetime-local',
+            'class': 'form-control',
         }),
-        label="Date de début"
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M'],
+        label="Date de début",
     )
     date_fin = forms.DateTimeField(
         widget=forms.DateTimeInput(attrs={
-            'type': 'datetime-local', 
-            'class': 'form-control'
+            'type': 'datetime-local',
+            'class': 'form-control',
         }),
-        label="Date de fin"
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M'],
+        label="Date de fin",
     )
     
     class Meta:

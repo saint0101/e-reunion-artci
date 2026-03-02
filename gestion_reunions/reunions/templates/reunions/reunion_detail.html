@@ -4,19 +4,14 @@
 
 {% block content %}
 
-{% with can_manage=False %}
-{% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
-{% with can_manage=True %}
-{% endif %}
-
 <div class="row">
     <div class="col-lg-8">
+
         <!-- Carte principale -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h4 class="mb-0">
-                    <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                    {{ reunion.titre }}
+                    <i class="fas fa-calendar-alt me-2 text-primary"></i>{{ reunion.titre }}
                 </h4>
                 <span id="status-badge" class="badge fs-6
                     {% if reunion.status == 'planned' %}bg-warning text-dark
@@ -31,14 +26,15 @@
                     {% endif %}
                 </span>
             </div>
+
             <div class="card-body">
-                <!-- Infos réunion -->
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6><i class="fas fa-calendar text-primary me-2"></i>Date et Heure</h6>
-                        <p>Du <strong>{{ reunion.date_debut|date:"d/m/Y à H:i" }}</strong><br>
-                           au <strong>{{ reunion.date_fin|date:"d/m/Y à H:i" }}</strong>
-                           <span class="text-muted ms-2">({{ reunion.get_duration }})</span>
+                        <p class="mb-0">
+                            Du <strong>{{ reunion.date_debut|date:"d/m/Y à H:i" }}</strong><br>
+                            au <strong>{{ reunion.date_fin|date:"d/m/Y à H:i" }}</strong>
+                            <span class="text-muted ms-2">({{ reunion.get_duration }})</span>
                         </p>
                     </div>
                     <div class="col-md-6">
@@ -65,19 +61,20 @@
                     <p>{{ reunion.description|linebreaks }}</p>
                 </div>
 
-                <!-- Actions admin/organisateur/secrétaire -->
-                {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                {% if user.role == 'admin' or reunion.organisateur == user %}
+                <div class="border-top pt-3 d-flex gap-2">
+                    <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Modifier
+                    </a>
+                    <a href="{% url 'reunion_delete' reunion.pk %}" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-2"></i>Supprimer
+                    </a>
+                </div>
+                {% elif reunion.secretaire == user %}
                 <div class="border-top pt-3">
-                    <div class="d-flex flex-wrap gap-2">
-                        {% if user.role == 'admin' or reunion.organisateur == user %}
-                        <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-primary">
-                            <i class="fas fa-edit me-2"></i>Modifier
-                        </a>
-                        <a href="{% url 'reunion_delete' reunion.pk %}" class="btn btn-outline-danger">
-                            <i class="fas fa-trash me-2"></i>Supprimer
-                        </a>
-                        {% endif %}
-                    </div>
+                    <a href="{% url 'reunion_update' reunion.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Modifier
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -85,7 +82,7 @@
 
         <!-- ─── Changement de statut ─────────────────────────────── -->
         {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
-        <div class="card mt-4" id="status-card">
+        <div class="card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-exchange-alt me-2 text-primary"></i>Changer le statut
@@ -102,23 +99,23 @@
                         {% endif %}
                     </strong>
                 </p>
-                <div class="d-flex flex-wrap gap-2" id="status-buttons">
-                    <button class="btn btn-warning btn-status {% if reunion.status == 'planned' %}active fw-bold{% endif %}"
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-warning btn-status {% if reunion.status == 'planned' %}fw-bold{% endif %}"
                             data-status="planned"
                             {% if reunion.status == 'planned' %}disabled{% endif %}>
                         <i class="fas fa-clock me-1"></i>Planifiée
                     </button>
-                    <button class="btn btn-success btn-status {% if reunion.status == 'ongoing' %}active fw-bold{% endif %}"
+                    <button class="btn btn-success btn-status {% if reunion.status == 'ongoing' %}fw-bold{% endif %}"
                             data-status="ongoing"
                             {% if reunion.status == 'ongoing' %}disabled{% endif %}>
                         <i class="fas fa-play me-1"></i>En cours
                     </button>
-                    <button class="btn btn-info btn-status {% if reunion.status == 'finished' %}active fw-bold{% endif %}"
+                    <button class="btn btn-info btn-status {% if reunion.status == 'finished' %}fw-bold{% endif %}"
                             data-status="finished"
                             {% if reunion.status == 'finished' %}disabled{% endif %}>
                         <i class="fas fa-check me-1"></i>Terminée
                     </button>
-                    <button class="btn btn-danger btn-status {% if reunion.status == 'cancelled' %}active fw-bold{% endif %}"
+                    <button class="btn btn-danger btn-status {% if reunion.status == 'cancelled' %}fw-bold{% endif %}"
                             data-status="cancelled"
                             {% if reunion.status == 'cancelled' %}disabled{% endif %}>
                         <i class="fas fa-ban me-1"></i>Annulée
@@ -183,16 +180,8 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ presence.prenom|default:"—" }}</td>
-                                <td>
-                                    <span title="{{ presence.organisation }}">
-                                        {{ presence.organisation|default:"—"|truncatechars:25 }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span title="{{ presence.fonction }}">
-                                        {{ presence.fonction|default:"—"|truncatechars:20 }}
-                                    </span>
-                                </td>
+                                <td><span title="{{ presence.organisation }}">{{ presence.organisation|default:"—"|truncatechars:25 }}</span></td>
+                                <td><span title="{{ presence.fonction }}">{{ presence.fonction|default:"—"|truncatechars:20 }}</span></td>
                                 <td>
                                     {% if presence.contact %}
                                         <a href="tel:{{ presence.contact }}" class="text-decoration-none">
@@ -202,8 +191,7 @@
                                 </td>
                                 <td>
                                     <a href="mailto:{{ presence.email }}" class="text-decoration-none">
-                                        <i class="fas fa-envelope text-primary me-1"></i>
-                                        {{ presence.email|truncatechars:25 }}
+                                        <i class="fas fa-envelope text-primary me-1"></i>{{ presence.email|truncatechars:25 }}
                                     </a><br>
                                     <small class="text-muted">{{ presence.confirmed_at|date:"d/m/Y H:i" }}</small>
                                 </td>
@@ -225,9 +213,7 @@
         <!-- Comptes-Rendus -->
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-file-alt me-2"></i>Comptes-Rendus
-                </h5>
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Comptes-Rendus</h5>
                 {% if user.role == 'secretary' and reunion.secretaire == user %}
                 <a href="{% url 'compte_rendu_create' reunion.pk %}" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus me-2"></i>Ajouter CR
@@ -273,10 +259,12 @@
                 {% endif %}
             </div>
         </div>
-    </div>
 
-    <!-- Sidebar -->
+    </div><!-- /col-lg-8 -->
+
+    <!-- ─── Sidebar ────────────────────────────────────────────── -->
     <div class="col-lg-4">
+
         <!-- QR Code -->
         <div class="card mb-4">
             <div class="card-header">
@@ -303,7 +291,7 @@
                 <div class="mt-3">
                     <small class="text-muted">
                         Lien direct :<br>
-                        <code style="font-size:0.75rem; word-break:break-all;">
+                        <code style="font-size:0.75rem;word-break:break-all;">
                             {{ request.scheme }}://{{ request.get_host }}/presence/{{ reunion.qr_code_uuid }}/
                         </code>
                     </small>
@@ -346,19 +334,17 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-{% endwith %}
-{% endwith %}
+    </div><!-- /col-lg-4 -->
+</div><!-- /row -->
 
+{% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
 <script>
-// ─── Changement de statut AJAX ────────────────────────────────────────────────
 const STATUS_CONFIG = {
-    planned:   { label: 'Planifiée',  cls: 'bg-warning text-dark' },
-    ongoing:   { label: 'En cours',   cls: 'bg-success' },
-    finished:  { label: 'Terminée',   cls: 'bg-info' },
-    cancelled: { label: 'Annulée',    cls: 'bg-danger' },
+    planned:   { label: 'Planifiée', cls: 'bg-warning text-dark' },
+    ongoing:   { label: 'En cours',  cls: 'bg-success' },
+    finished:  { label: 'Terminée',  cls: 'bg-info' },
+    cancelled: { label: 'Annulée',   cls: 'bg-danger' },
 };
 
 document.querySelectorAll('.btn-status').forEach(btn => {
@@ -368,7 +354,6 @@ document.querySelectorAll('.btn-status').forEach(btn => {
         const badge     = document.getElementById('status-badge');
         const allBtns   = document.querySelectorAll('.btn-status');
 
-        // Désactiver tous les boutons pendant la requête
         allBtns.forEach(b => b.disabled = true);
         feedback.style.display = 'none';
 
@@ -384,42 +369,37 @@ document.querySelectorAll('.btn-status').forEach(btn => {
         .then(data => {
             if (data.success) {
                 const cfg = STATUS_CONFIG[data.new_status];
-
-                // Mettre à jour le badge
                 badge.className = 'badge fs-6 ' + cfg.cls;
                 badge.innerHTML = cfg.label;
-
-                // Mettre à jour le texte courant
                 document.getElementById('current-status-text').textContent = cfg.label;
-
-                // Réactiver les boutons sauf le nouveau statut actif
                 allBtns.forEach(b => {
-                    b.disabled = (b.dataset.status === data.new_status);
-                    b.classList.toggle('fw-bold', b.dataset.status === data.new_status);
+                    const isActive = b.dataset.status === data.new_status;
+                    b.disabled = isActive;
+                    b.classList.toggle('fw-bold', isActive);
                 });
-
-                // Message de succès
                 feedback.className = 'mt-2 alert alert-success py-2';
                 feedback.textContent = 'Statut mis à jour : ' + cfg.label;
                 feedback.style.display = 'block';
                 setTimeout(() => { feedback.style.display = 'none'; }, 3000);
             } else {
-                allBtns.forEach(b => { b.disabled = (b.classList.contains('fw-bold')); });
+                allBtns.forEach(b => { b.disabled = b.classList.contains('fw-bold'); });
                 feedback.className = 'mt-2 alert alert-danger py-2';
                 feedback.textContent = data.error || 'Erreur lors de la mise à jour.';
                 feedback.style.display = 'block';
             }
         })
         .catch(() => {
-            allBtns.forEach(b => { b.disabled = (b.classList.contains('fw-bold')); });
+            allBtns.forEach(b => { b.disabled = b.classList.contains('fw-bold'); });
             feedback.className = 'mt-2 alert alert-danger py-2';
             feedback.textContent = 'Erreur réseau. Veuillez réessayer.';
             feedback.style.display = 'block';
         });
     });
 });
+</script>
+{% endif %}
 
-// ─── Impression QR ────────────────────────────────────────────────────────────
+<script>
 function printQR() {
     const qrImage = document.querySelector('img[alt="QR Code"]');
     if (!qrImage) { alert('QR Code non disponible.'); return; }
@@ -428,11 +408,11 @@ function printQR() {
         <html><head>
             <title>QR Code - {{ reunion.titre|escapejs }}</title>
             <style>
-                body { text-align:center; font-family:Arial,sans-serif; padding:20px; }
-                h1 { color:#FF6B35; font-size:1.4rem; }
-                img { max-width:280px; border:2px solid #ddd; padding:10px; border-radius:8px; }
-                .info { margin:16px auto; padding:16px; background:#f8f9fa; border-radius:10px; max-width:400px; text-align:left; }
-                p { margin:4px 0; }
+                body{text-align:center;font-family:Arial,sans-serif;padding:20px;}
+                h1{color:#FF6B35;font-size:1.4rem;}
+                img{max-width:280px;border:2px solid #ddd;padding:10px;border-radius:8px;}
+                .info{margin:16px auto;padding:16px;background:#f8f9fa;border-radius:10px;max-width:400px;text-align:left;}
+                p{margin:4px 0;}
             </style>
         </head><body>
             <h1>{{ reunion.titre|escapejs }}</h1>
@@ -449,15 +429,10 @@ function printQR() {
     win.print();
 }
 
-// ─── Partage QR ───────────────────────────────────────────────────────────────
 function shareQR() {
     const url = '{{ request.scheme }}://{{ request.get_host }}/presence/{{ reunion.qr_code_uuid }}/';
     if (navigator.share) {
-        navigator.share({
-            title: '{{ reunion.titre|escapejs }}',
-            text: 'Confirmez votre présence à cette réunion',
-            url: url,
-        }).catch(() => {});
+        navigator.share({ title: '{{ reunion.titre|escapejs }}', url: url }).catch(() => {});
     } else {
         navigator.clipboard.writeText(url)
             .then(() => alert('Lien copié dans le presse-papier !'))
@@ -465,4 +440,5 @@ function shareQR() {
     }
 }
 </script>
+
 {% endblock %}
