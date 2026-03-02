@@ -89,8 +89,11 @@ class ReunionForm(forms.ModelForm):
 
             # Vérifier la date dans le passé seulement à la création
             is_new = not (self.instance and self.instance.pk)
-            if is_new and date_debut < timezone.now():
-                raise ValidationError("La date de début ne peut pas être dans le passé.")
+            if is_new:
+                from django.utils.timezone import make_aware, is_naive
+                date_debut_aware = make_aware(date_debut) if is_naive(date_debut) else date_debut
+                if date_debut_aware < timezone.now():
+                    raise ValidationError("La date de début ne peut pas être dans le passé.")
 
         return cleaned_data
     
