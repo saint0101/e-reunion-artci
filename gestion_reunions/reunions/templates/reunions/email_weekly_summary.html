@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+  .wrapper { max-width: 600px; margin: 20px auto; }
+  .header { background: linear-gradient(135deg, #FF6B35, #e55a2b); color: white; padding: 30px 24px; border-radius: 12px 12px 0 0; text-align: center; }
+  .header h1 { margin: 0; font-size: 22px; }
+  .header .subtitle { margin: 6px 0 0; opacity: 0.85; font-size: 14px; }
+  .body { background: white; padding: 24px; }
+  .section-title { font-size: 16px; font-weight: 600; color: #FF6B35; border-left: 4px solid #FF6B35; padding-left: 10px; margin: 24px 0 12px; }
+  .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat-box { flex: 1; background: #f8f9fa; border-radius: 8px; padding: 14px; text-align: center; }
+  .stat-box .num { font-size: 28px; font-weight: 700; color: #FF6B35; }
+  .stat-box .lbl { font-size: 12px; color: #6c757d; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: #f1f1f1; padding: 8px 12px; text-align: left; font-weight: 600; color: #555; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: #FF6B35; color: white; }
+  .footer { background: #f8f9fa; padding: 16px 24px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px; color: #999; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>📊 Récapitulatif hebdomadaire</h1>
+    <p class="subtitle">Semaine du {{ start|date:"d/m/Y" }} au {{ end|date:"d/m/Y" }}</p>
+  </div>
+
+  <div class="body">
+    <!-- Stats globales -->
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="num">{{ reunions_data|length }}</div>
+        <div class="lbl">Réunions tenues</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">{{ total_participants }}</div>
+        <div class="lbl">Participants confirmés</div>
+      </div>
+    </div>
+
+    <!-- Réunions tenues -->
+    {% if reunions_data %}
+    <div class="section-title">Réunions de la semaine</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Réunion</th>
+          <th>Date</th>
+          <th style="text-align:right;">Participants</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in reunions_data %}
+        <tr>
+          <td>{{ item.reunion.titre }}</td>
+          <td>{{ item.reunion.date_debut|date:"d/m/Y H:i" }}</td>
+          <td style="text-align:right;"><span class="badge">{{ item.nb_participants }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#6c757d; font-size:14px;">Aucune réunion terminée cette semaine.</p>
+    {% endif %}
+
+    <!-- Top organisations -->
+    {% if top_organisations %}
+    <div class="section-title">Top organisations participantes</div>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Organisation</th><th style="text-align:right;">Participants</th></tr>
+      </thead>
+      <tbody>
+        {% for org in top_organisations %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ org.organisation|default:"(Non renseigné)" }}</td>
+          <td style="text-align:right;"><strong>{{ org.n }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Prochaines réunions -->
+    {% if prochaines_reunions %}
+    <div class="section-title">Prochaines réunions (7 jours)</div>
+    <table>
+      <thead>
+        <tr><th>Réunion</th><th>Date</th><th>Lieu</th></tr>
+      </thead>
+      <tbody>
+        {% for r in prochaines_reunions %}
+        <tr>
+          <td>{{ r.titre }}</td>
+          <td>{{ r.date_debut|date:"d/m/Y H:i" }}</td>
+          <td>{{ r.lieu|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+
+  <div class="footer">
+    Cet email a été généré automatiquement par <strong>QR Meeting ARTCI</strong>.<br>
+    Ne pas répondre à cet email.
+  </div>
+</div>
+</body>
+</html>

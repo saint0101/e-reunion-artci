@@ -72,6 +72,7 @@ services:
       SITE_PROTOCOL: "http://"
       SITE_ADDRESS: "196.216.227.105"  # IP publique
       DEFAULT_LIST_SIZE: "10"
+      SERVE_MEDIA_FILES: "true"
       
       # IMPORTANT: Autoriser l'IP publique et locale
       ALLOWED_HOSTS: "127.0.0.1,localhost,172.16.0.153,196.216.227.105,artci.ci"

@@ -126,6 +126,397 @@
         </div>
         {% endif %}
 
+        <!-- ─── Ordre du Jour ─────────────────────────────────────── -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-ol me-2 text-primary"></i>Ordre du Jour
+                    {% if agenda_points %}
+                    <span class="badge bg-secondary ms-2" id="agenda-count-badge">
+                        {{ agenda_points|length }} point{{ agenda_points|length|pluralize }}
+                    </span>
+                    {% endif %}
+                </h5>
+                {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                <a href="{% url 'agenda_point_create' reunion.pk %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Ajouter un point
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if agenda_points %}
+                <!-- Barre de progression -->
+                {% with total=agenda_points|length traites=0 %}
+                <div class="mb-3" id="agenda-progress-wrapper">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Points traités</small>
+                        <small class="text-muted" id="agenda-progress-label">
+                            {% for p in agenda_points %}{% if p.est_traite %}{% with traites=forloop.counter %}{% endwith %}{% endif %}{% endfor %}
+                            <!-- computed by JS -->
+                        </small>
+                    </div>
+                    <div class="progress" style="height:8px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             id="agenda-progress-bar"
+                             style="width:0%"></div>
+                    </div>
+                </div>
+                {% endwith %}
+
+                <ol class="list-group list-group-flush" id="agenda-list">
+                    {% for point in agenda_points %}
+                    <li class="list-group-item d-flex align-items-start gap-3 px-0 py-2 {% if point.est_traite %}bg-light{% endif %}"
+                        id="agenda-point-{{ point.pk }}" data-pk="{{ point.pk }}" data-ordre="{{ point.ordre }}">
+                        {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                        <span class="drag-handle text-muted mt-2" style="cursor:grab;font-size:1.1rem;line-height:1;" title="Glisser pour réordonner">⠿</span>
+                        {% endif %}
+                        <div class="mt-1">
+                            <button class="btn btn-toggle-traite btn-sm rounded-circle p-0"
+                                    data-pk="{{ point.pk }}"
+                                    style="width:28px;height:28px;border:2px solid {% if point.est_traite %}#28a745{% else %}#dee2e6{% endif %};background:{% if point.est_traite %}#28a745{% else %}'transparent'{% endif %};"
+                                    title="{% if point.est_traite %}Marquer comme non traité{% else %}Marquer comme traité{% endif %}">
+                                {% if point.est_traite %}
+                                <i class="fas fa-check text-white" style="font-size:11px;"></i>
+                                {% else %}
+                                <i class="fas fa-circle text-muted" style="font-size:6px;"></i>
+                                {% endif %}
+                            </button>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-secondary">{{ point.ordre }}</span>
+                                <strong {% if point.est_traite %}class="text-muted text-decoration-line-through"{% endif %}>{{ point.titre }}</strong>
+                                {% if point.duree_minutes %}
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-clock me-1"></i>{{ point.duree_minutes }} min
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if point.description %}
+                            <small class="text-muted d-block mt-1">{{ point.description }}</small>
+                            {% endif %}
+                            {% if point.responsable_interne or point.responsable_externe %}
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>
+                                {% if point.responsable_interne %}
+                                    {{ point.responsable_interne.first_name }} {{ point.responsable_interne.last_name }}
+                                {% else %}
+                                    {{ point.responsable_externe }}
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                            {% if point.notes_seance %}
+                            <div class="mt-2 p-2 rounded border-start border-warning border-3 bg-warning bg-opacity-10" id="notes-display-{{ point.pk }}">
+                                <small class="fw-semibold text-warning-emphasis"><i class="fas fa-sticky-note me-1"></i>Notes de séance :</small>
+                                <small class="d-block text-dark mt-1">{{ point.notes_seance|linebreaksbr }}</small>
+                            </div>
+                            {% else %}
+                            <div class="mt-2 p-2 rounded border-start border-warning border-3 bg-warning bg-opacity-10 d-none" id="notes-display-{{ point.pk }}">
+                                <small class="fw-semibold text-warning-emphasis"><i class="fas fa-sticky-note me-1"></i>Notes de séance :</small>
+                                <small class="d-block text-dark mt-1 notes-text"></small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                        <div class="d-flex gap-1 flex-shrink-0">
+                            <button class="btn btn-outline-warning btn-sm btn-notes-point"
+                                    data-pk="{{ point.pk }}"
+                                    data-notes="{{ point.notes_seance|escapejs }}"
+                                    title="Notes de séance">
+                                <i class="fas fa-sticky-note"></i>
+                            </button>
+                            <a href="{% url 'agenda_point_update' point.pk %}" class="btn btn-outline-secondary btn-sm" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm btn-delete-point" data-pk="{{ point.pk }}" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-list-ul fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Aucun point d'agenda défini.</p>
+                    {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                    <a href="{% url 'agenda_point_create' reunion.pk %}" class="btn btn-outline-primary btn-sm mt-3">
+                        <i class="fas fa-plus me-1"></i>Ajouter le premier point
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Diligences -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2 text-warning"></i>Diligences
+                    {% if diligences %}
+                    <span class="badge bg-secondary ms-2" id="diligence-count-badge">
+                        {{ diligences|length }} action{{ diligences|length|pluralize }}
+                    </span>
+                    {% endif %}
+                </h5>
+                <div class="d-flex gap-2 align-items-center">
+                    {% if diligences %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-1"></i>Exporter
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'export_diligences' reunion.pk %}?format=pdf">
+                                    <i class="fas fa-file-pdf me-2 text-danger"></i>PDF
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'export_diligences' reunion.pk %}?format=excel">
+                                    <i class="fas fa-file-excel me-2 text-success"></i>Excel
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                    {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                    <a href="{% url 'diligence_create' reunion.pk %}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-plus me-1"></i>Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if diligences %}
+                <!-- Barre de progression -->
+                <div class="mb-3" id="diligence-progress-wrapper">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Diligences terminées</small>
+                        <small class="text-muted" id="diligence-progress-label">
+                            {{ diligences|length }} au total
+                        </small>
+                    </div>
+                    <div class="progress" style="height:8px;">
+                        <div class="progress-bar bg-warning" role="progressbar"
+                             id="diligence-progress-bar" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <ul class="list-group list-group-flush" id="diligence-list">
+                    {% for d in diligences %}
+                    <li class="list-group-item px-0 py-2" id="diligence-item-{{ d.pk }}">
+                        <div class="d-flex align-items-start gap-3">
+                            <!-- Indicateur priorité -->
+                            <div class="mt-1 flex-shrink-0">
+                                {% if d.priorite == 'high' %}
+                                <span class="badge bg-danger" title="Urgente"><i class="fas fa-flag"></i></span>
+                                {% elif d.priorite == 'medium' %}
+                                <span class="badge bg-warning text-dark" title="Normale"><i class="fas fa-flag"></i></span>
+                                {% else %}
+                                <span class="badge bg-secondary" title="Faible"><i class="fas fa-flag"></i></span>
+                                {% endif %}
+                            </div>
+                            <!-- Contenu -->
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <strong class="{% if d.status == 'completed' %}text-muted text-decoration-line-through{% endif %}" id="diligence-titre-{{ d.pk }}">
+                                        {{ d.titre }}
+                                    </strong>
+                                    <!-- Badge statut cliquable -->
+                                    <button class="btn btn-sm p-0 border-0 btn-diligence-status"
+                                            data-pk="{{ d.pk }}"
+                                            data-status="{{ d.status }}"
+                                            title="Changer le statut"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalDiligenceStatus">
+                                        <span class="badge
+                                            {% if d.status == 'open' %}bg-secondary
+                                            {% elif d.status == 'in_progress' %}bg-primary
+                                            {% elif d.status == 'completed' %}bg-success
+                                            {% else %}bg-danger{% endif %}"
+                                            id="diligence-badge-{{ d.pk }}">
+                                            {{ d.get_status_display }}
+                                        </span>
+                                    </button>
+                                    {% if d.is_overdue %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>En retard
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% if d.description %}
+                                <small class="text-muted d-block mt-1">{{ d.description }}</small>
+                                {% endif %}
+                                <div class="d-flex gap-3 mt-1 flex-wrap">
+                                    {% if d.responsable_interne or d.responsable_externe %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>{{ d.get_responsable_display }}
+                                    </small>
+                                    {% endif %}
+                                    {% if d.echeance %}
+                                    <small class="{% if d.is_overdue %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                                        <i class="fas fa-calendar-day me-1"></i>{{ d.echeance|date:"d/m/Y" }}
+                                    </small>
+                                    {% endif %}
+                                    {% if d.commentaires.count > 0 %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-comment me-1"></i>{{ d.commentaires.count }} commentaire{{ d.commentaires.count|pluralize }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- Actions -->
+                            {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                            <div class="d-flex gap-1 flex-shrink-0">
+                                <button class="btn btn-outline-secondary btn-sm btn-diligence-comment"
+                                        data-pk="{{ d.pk }}"
+                                        data-titre="{{ d.titre|escapejs }}"
+                                        title="Commentaires"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalDiligenceComment">
+                                    <i class="fas fa-comment"></i>
+                                </button>
+                                <a href="{% url 'diligence_update' d.pk %}" class="btn btn-outline-secondary btn-sm" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm btn-delete-diligence" data-pk="{{ d.pk }}" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Aucune diligence enregistrée pour cette réunion.</p>
+                    {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+                    <a href="{% url 'diligence_create' reunion.pk %}" class="btn btn-outline-warning btn-sm mt-3">
+                        <i class="fas fa-plus me-1"></i>Ajouter la première diligence
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Modal : changement de statut diligence -->
+        <div class="modal fade" id="modalDiligenceStatus" tabindex="-1" aria-labelledby="modalDiligenceStatusLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalDiligenceStatusLabel">
+                            <i class="fas fa-exchange-alt me-2 text-warning"></i>Changer le statut
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3" id="modal-status-diligence-titre"></p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nouveau statut</label>
+                            <div class="d-flex gap-2 flex-wrap" id="status-buttons">
+                                <button class="btn btn-outline-secondary btn-status-choice" data-val="open">À faire</button>
+                                <button class="btn btn-outline-primary btn-status-choice" data-val="in_progress">En cours</button>
+                                <button class="btn btn-outline-success btn-status-choice" data-val="completed">Terminée</button>
+                                <button class="btn btn-outline-danger btn-status-choice" data-val="cancelled">Annulée</button>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Commentaire <small class="text-muted fw-normal">(optionnel)</small></label>
+                            <textarea id="modal-status-commentaire" class="form-control" rows="3"
+                                      placeholder="Précisez la raison du changement..."></textarea>
+                        </div>
+                        <div id="modal-status-feedback" class="mt-2" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-warning text-white" id="btn-confirm-status">
+                            <i class="fas fa-save me-1"></i>Enregistrer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal : commentaires diligence -->
+        <div class="modal fade" id="modalDiligenceComment" tabindex="-1" aria-labelledby="modalDiligenceCommentLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalDiligenceCommentLabel">
+                            <i class="fas fa-comments me-2 text-secondary"></i>Commentaires
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3" id="modal-comment-diligence-titre"></p>
+
+                        <!-- Historique -->
+                        <div id="comment-history" class="mb-3 border rounded p-3 bg-light" style="max-height:260px;overflow-y:auto;">
+                            {% for d in diligences %}
+                            <div class="diligence-comments d-none" data-pk="{{ d.pk }}">
+                                {% for c in d.commentaires.all %}
+                                <div class="mb-3 pb-2 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong class="small">{{ c.auteur.first_name }} {{ c.auteur.last_name }}</strong>
+                                            {% if c.is_status_change %}
+                                            <span class="badge bg-light text-dark border ms-1 small">
+                                                <span class="badge
+                                                    {% if c.ancien_status == 'open' %}bg-secondary
+                                                    {% elif c.ancien_status == 'in_progress' %}bg-primary
+                                                    {% elif c.ancien_status == 'completed' %}bg-success
+                                                    {% else %}bg-danger{% endif %}" style="font-size:0.65rem;">
+                                                    {{ c.get_ancien_status_display|default:c.ancien_status }}
+                                                </span>
+                                                <i class="fas fa-arrow-right mx-1 text-muted" style="font-size:0.65rem;"></i>
+                                                <span class="badge
+                                                    {% if c.nouveau_status == 'open' %}bg-secondary
+                                                    {% elif c.nouveau_status == 'in_progress' %}bg-primary
+                                                    {% elif c.nouveau_status == 'completed' %}bg-success
+                                                    {% else %}bg-danger{% endif %}" style="font-size:0.65rem;">
+                                                    {{ c.get_nouveau_status_display|default:c.nouveau_status }}
+                                                </span>
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">{{ c.created_at|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    {% if c.contenu %}
+                                    <p class="mb-0 mt-1 small">{{ c.contenu }}</p>
+                                    {% endif %}
+                                </div>
+                                {% empty %}
+                                <p class="text-muted small mb-0 text-center py-2" id="no-comments-msg-{{ d.pk }}">
+                                    Aucun commentaire pour l'instant.
+                                </p>
+                                {% endfor %}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Nouveau commentaire -->
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Ajouter un commentaire</label>
+                            <textarea id="modal-comment-contenu" class="form-control" rows="3"
+                                      placeholder="Votre commentaire..."></textarea>
+                        </div>
+                        <div id="modal-comment-feedback" class="mt-2" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="button" class="btn btn-secondary" id="btn-submit-comment">
+                            <i class="fas fa-paper-plane me-1"></i>Envoyer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Participants -->
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -260,6 +651,64 @@
             </div>
         </div>
 
+        <!-- ─── Invitations ─────────────────────────────────────── -->
+        {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-envelope-open-text me-2 text-primary"></i>Invitations
+                    {% if invitations %}
+                    <span class="badge bg-secondary ms-2">{{ invitations|length }}</span>
+                    {% endif %}
+                </h5>
+                <a href="{% url 'invitation_send' reunion.pk %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-user-plus me-1"></i>Inviter des participants
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if invitations %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 small">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Email</th>
+                                <th>Nom</th>
+                                <th>Statut</th>
+                                <th>Envoyée le</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in invitations %}
+                            <tr>
+                                <td>{{ inv.email }}</td>
+                                <td>{{ inv.prenom }} {{ inv.nom }}</td>
+                                <td>
+                                    {% if inv.status == 'accepted' %}
+                                        <span class="badge bg-success">Acceptée</span>
+                                    {% elif inv.status == 'declined' %}
+                                        <span class="badge bg-danger">Déclinée</span>
+                                    {% elif inv.status == 'sent' %}
+                                        <span class="badge bg-info text-dark">Envoyée</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">En attente</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ inv.sent_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Aucune invitation envoyée.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
     </div><!-- /col-lg-8 -->
 
     <!-- ─── Sidebar ────────────────────────────────────────────── -->
@@ -271,14 +720,13 @@
                 <h6 class="mb-0"><i class="fas fa-qrcode me-2"></i>QR Code de Présence</h6>
             </div>
             <div class="card-body text-center">
-                {% if reunion.qr_code_image %}
-                <img src="{{ reunion.qr_code_image.url }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
-                {% else %}
-                <div class="bg-light p-4 rounded mb-3">
+                <img src="{% url 'qr_code_image' reunion.pk %}"
+                     alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;"
+                     onerror="this.style.display='none';document.getElementById('qr-fallback-{{ reunion.pk }}').style.display='block'">
+                <div id="qr-fallback-{{ reunion.pk }}" class="bg-light p-4 rounded mb-3" style="display:none;">
                     <i class="fas fa-qrcode fa-4x text-muted"></i>
-                    <p class="text-muted mt-2">QR Code en cours de génération...</p>
+                    <p class="text-muted mt-2">QR Code indisponible</p>
                 </div>
-                {% endif %}
                 <p class="text-muted small">Scanner ce code pour confirmer votre présence</p>
                 <div class="mt-2 d-flex justify-content-center gap-2">
                     <button class="btn btn-outline-primary btn-sm" onclick="printQR()">
@@ -306,15 +754,21 @@
             </div>
             <div class="card-body">
                 <div class="row text-center">
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="border-end">
                             <h4 class="text-primary mb-0">{{ presences.count }}</h4>
                             <small class="text-muted">Participants</small>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <h4 class="text-success mb-0">{{ comptes_rendus.count }}</h4>
-                        <small class="text-muted">Comptes-Rendus</small>
+                    <div class="col-4">
+                        <div class="border-end">
+                            <h4 class="text-success mb-0">{{ comptes_rendus.count }}</h4>
+                            <small class="text-muted">CR</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-info mb-0">{{ invitations|length }}</h4>
+                        <small class="text-muted">Invitations</small>
                     </div>
                 </div>
                 <hr>
@@ -400,6 +854,292 @@ document.querySelectorAll('.btn-status').forEach(btn => {
 {% endif %}
 
 <script>
+// ─── Agenda : toggle traité + suppression ────────────────────────────────────
+(function () {
+    const csrfToken = '{{ csrf_token }}';
+
+    function updateProgressBar() {
+        const items = document.querySelectorAll('#agenda-list li');
+        if (!items.length) return;
+        const traites = document.querySelectorAll('#agenda-list li.bg-light').length;
+        const total   = items.length;
+        const pct     = Math.round((traites / total) * 100);
+        const bar     = document.getElementById('agenda-progress-bar');
+        const label   = document.getElementById('agenda-progress-label');
+        if (bar)   bar.style.width = pct + '%';
+        if (label) label.textContent = traites + ' / ' + total;
+    }
+
+    // Init progress bar on load
+    document.addEventListener('DOMContentLoaded', updateProgressBar);
+
+    // Toggle traité
+    document.querySelectorAll('.btn-toggle-traite').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const pk = this.dataset.pk;
+            fetch(`/agenda/${pk}/toggle/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const li     = document.getElementById('agenda-point-' + pk);
+                const strong = li.querySelector('strong');
+                if (data.est_traite) {
+                    li.classList.add('bg-light');
+                    strong.classList.add('text-muted', 'text-decoration-line-through');
+                    this.style.borderColor = '#28a745';
+                    this.style.background  = '#28a745';
+                    this.innerHTML = '<i class="fas fa-check text-white" style="font-size:11px;"></i>';
+                    this.title = 'Marquer comme non traité';
+                } else {
+                    li.classList.remove('bg-light');
+                    strong.classList.remove('text-muted', 'text-decoration-line-through');
+                    this.style.borderColor = '#dee2e6';
+                    this.style.background  = 'transparent';
+                    this.innerHTML = '<i class="fas fa-circle text-muted" style="font-size:6px;"></i>';
+                    this.title = 'Marquer comme traité';
+                }
+                updateProgressBar();
+            });
+        });
+    });
+
+    // Suppression
+    document.querySelectorAll('.btn-delete-point').forEach(btn => {
+        btn.addEventListener('click', function () {
+            if (!confirm('Supprimer ce point d\'agenda ?')) return;
+            const pk = this.dataset.pk;
+            fetch(`/agenda/${pk}/supprimer/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const li = document.getElementById('agenda-point-' + pk);
+                    if (li) li.remove();
+                    updateProgressBar();
+                }
+            });
+        });
+    });
+})();
+</script>
+
+<script>
+// ─── Diligences ───────────────────────────────────────────────────────────────
+(function () {
+    const csrfToken = '{{ csrf_token }}';
+    let currentDiligencePk = null;
+    let selectedStatus = null;
+
+    // Correspondance statut → libellé (pour màj DOM sans rechargement)
+    const STATUS_LABELS = {
+        'open':        'À faire',
+        'in_progress': 'En cours',
+        'completed':   'Terminée',
+        'cancelled':   'Annulée',
+    };
+    const STATUS_CLASSES = {
+        'open':        'bg-secondary',
+        'in_progress': 'bg-primary',
+        'completed':   'bg-success',
+        'cancelled':   'bg-danger',
+    };
+
+    // Barre de progression
+    function updateDiligenceProgress() {
+        const items = document.querySelectorAll('#diligence-list li');
+        if (!items.length) return;
+        const total = items.length;
+        let terminees = 0;
+        items.forEach(li => {
+            const badge = li.querySelector('.btn-diligence-status [class*="bg-"]');
+            if (badge && badge.classList.contains('bg-success')) terminees++;
+        });
+        const pct = Math.round((terminees / total) * 100);
+        const bar   = document.getElementById('diligence-progress-bar');
+        const label = document.getElementById('diligence-progress-label');
+        if (bar)   bar.style.width = pct + '%';
+        if (label) label.textContent = terminees + ' / ' + total + ' terminée' + (terminees > 1 ? 's' : '');
+    }
+
+    document.addEventListener('DOMContentLoaded', updateDiligenceProgress);
+
+    // ── Modal : changement de statut ──────────────────────────────────────────
+    document.querySelectorAll('.btn-diligence-status').forEach(btn => {
+        btn.addEventListener('click', function () {
+            currentDiligencePk = this.dataset.pk;
+            selectedStatus = this.dataset.status;
+            const titre = this.closest('li').querySelector('strong').textContent.trim();
+            document.getElementById('modal-status-diligence-titre').textContent = titre;
+            document.getElementById('modal-status-commentaire').value = '';
+            document.getElementById('modal-status-feedback').style.display = 'none';
+
+            // Marquer le statut courant
+            document.querySelectorAll('.btn-status-choice').forEach(b => {
+                b.classList.toggle('active', b.dataset.val === selectedStatus);
+            });
+        });
+    });
+
+    // Sélection d'un nouveau statut
+    document.querySelectorAll('.btn-status-choice').forEach(b => {
+        b.addEventListener('click', function () {
+            selectedStatus = this.dataset.val;
+            document.querySelectorAll('.btn-status-choice').forEach(x => x.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Confirmer le changement de statut
+    document.getElementById('btn-confirm-status')?.addEventListener('click', function () {
+        if (!currentDiligencePk || !selectedStatus) return;
+        const commentaire = document.getElementById('modal-status-commentaire').value.trim();
+        const feedback    = document.getElementById('modal-status-feedback');
+        this.disabled = true;
+
+        fetch(`/diligence/${currentDiligencePk}/status/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: selectedStatus, commentaire }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            if (!data.success) {
+                feedback.className = 'mt-2 alert alert-danger py-2';
+                feedback.textContent = data.error || 'Erreur inconnue';
+                feedback.style.display = 'block';
+                return;
+            }
+            // Mettre à jour le badge dans la liste
+            const badge = document.querySelector(`#diligence-item-${currentDiligencePk} .btn-diligence-status span`);
+            if (badge) {
+                badge.className = 'badge ' + (STATUS_CLASSES[data.status] || 'bg-secondary');
+                badge.textContent = STATUS_LABELS[data.status] || data.status;
+            }
+            // Mettre à jour data-status sur le bouton
+            const btn = document.querySelector(`#diligence-item-${currentDiligencePk} .btn-diligence-status`);
+            if (btn) btn.dataset.status = data.status;
+
+            // Barrer le titre si terminée/annulée
+            const titre = document.getElementById(`diligence-titre-${currentDiligencePk}`);
+            if (titre) {
+                if (data.status === 'completed' || data.status === 'cancelled') {
+                    titre.classList.add('text-muted', 'text-decoration-line-through');
+                } else {
+                    titre.classList.remove('text-muted', 'text-decoration-line-through');
+                }
+            }
+
+            updateDiligenceProgress();
+            bootstrap.Modal.getInstance(document.getElementById('modalDiligenceStatus')).hide();
+        })
+        .catch(() => {
+            this.disabled = false;
+            feedback.className = 'mt-2 alert alert-danger py-2';
+            feedback.textContent = 'Erreur réseau. Veuillez réessayer.';
+            feedback.style.display = 'block';
+        });
+    });
+
+    // ── Modal : commentaires ──────────────────────────────────────────────────
+    document.querySelectorAll('.btn-diligence-comment').forEach(btn => {
+        btn.addEventListener('click', function () {
+            currentDiligencePk = this.dataset.pk;
+            const titre = this.dataset.titre;
+            document.getElementById('modal-comment-diligence-titre').textContent = titre;
+            document.getElementById('modal-comment-contenu').value = '';
+            document.getElementById('modal-comment-feedback').style.display = 'none';
+
+            // Afficher les commentaires de cette diligence
+            document.querySelectorAll('.diligence-comments').forEach(el => el.classList.add('d-none'));
+            const block = document.querySelector(`.diligence-comments[data-pk="${currentDiligencePk}"]`);
+            if (block) block.classList.remove('d-none');
+        });
+    });
+
+    document.getElementById('btn-submit-comment')?.addEventListener('click', function () {
+        if (!currentDiligencePk) return;
+        const contenu  = document.getElementById('modal-comment-contenu').value.trim();
+        const feedback = document.getElementById('modal-comment-feedback');
+        if (!contenu) {
+            feedback.className = 'mt-2 alert alert-warning py-2';
+            feedback.textContent = 'Le commentaire ne peut pas être vide.';
+            feedback.style.display = 'block';
+            return;
+        }
+        this.disabled = true;
+
+        fetch(`/diligence/${currentDiligencePk}/commenter/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commentaire: contenu }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            if (!data.success) {
+                feedback.className = 'mt-2 alert alert-danger py-2';
+                feedback.textContent = data.error || 'Erreur inconnue';
+                feedback.style.display = 'block';
+                return;
+            }
+            // Injecter le nouveau commentaire dans l'historique
+            const c = data.commentaire;
+            const block = document.querySelector(`.diligence-comments[data-pk="${currentDiligencePk}"]`);
+            const noMsg = document.getElementById(`no-comments-msg-${currentDiligencePk}`);
+            if (noMsg) noMsg.remove();
+            if (block) {
+                const div = document.createElement('div');
+                div.className = 'mb-3 pb-2 border-bottom';
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong class="small">${c.auteur}</strong>
+                        <small class="text-muted">${c.date}</small>
+                    </div>
+                    <p class="mb-0 mt-1 small">${c.contenu}</p>`;
+                block.appendChild(div);
+                const hist = document.getElementById('comment-history');
+                if (hist) hist.scrollTop = hist.scrollHeight;
+            }
+            document.getElementById('modal-comment-contenu').value = '';
+            feedback.style.display = 'none';
+        })
+        .catch(() => {
+            this.disabled = false;
+            feedback.className = 'mt-2 alert alert-danger py-2';
+            feedback.textContent = 'Erreur réseau. Veuillez réessayer.';
+            feedback.style.display = 'block';
+        });
+    });
+
+    // ── Suppression diligence ─────────────────────────────────────────────────
+    document.querySelectorAll('.btn-delete-diligence').forEach(btn => {
+        btn.addEventListener('click', function () {
+            if (!confirm('Supprimer cette diligence et tous ses commentaires ?')) return;
+            const pk = this.dataset.pk;
+            fetch(`/diligence/${pk}/supprimer/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const li = document.getElementById('diligence-item-' + pk);
+                    if (li) li.remove();
+                    updateDiligenceProgress();
+                }
+            });
+        });
+    });
+})();
+</script>
+
+<script>
 function printQR() {
     const qrImage = document.querySelector('img[alt="QR Code"]');
     if (!qrImage) { alert('QR Code non disponible.'); return; }
@@ -439,6 +1179,127 @@ function shareQR() {
             .catch(() => prompt('Copiez ce lien :', url));
     }
 }
+</script>
+
+<!-- Modal Notes de séance -->
+<div class="modal fade" id="notesModal" tabindex="-1" aria-labelledby="notesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="notesModalLabel">
+                    <i class="fas fa-sticky-note me-2 text-warning"></i>Notes de séance
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2" id="notes-modal-point-title"></p>
+                <textarea id="notes-modal-textarea" class="form-control" rows="8"
+                          placeholder="Saisissez les notes prises durant la séance sur ce point…"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning" id="btn-save-notes">
+                    <i class="fas fa-save me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+
+<script>
+// ─── Agenda : drag-and-drop + notes de séance ────────────────────────────────
+(function () {
+    const csrfToken = '{{ csrf_token }}';
+    const reunionId = {{ reunion.pk }};
+    let currentNotesPk = null;
+
+    // ── SortableJS ───────────────────────────────────────────────────────────
+    const agendaList = document.getElementById('agenda-list');
+    {% if user.role == 'admin' or reunion.organisateur == user or reunion.secretaire == user %}
+    if (agendaList) {
+        new Sortable(agendaList, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function () {
+                const items = agendaList.querySelectorAll('li[data-pk]');
+                const payload = Array.from(items).map((li, idx) => ({
+                    id: parseInt(li.dataset.pk),
+                    ordre: idx + 1,
+                }));
+                fetch(`/reunion/${reunionId}/agenda/reorder/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mettre à jour les badges N°
+                        items.forEach((li, idx) => {
+                            const badge = li.querySelector('.badge.bg-secondary');
+                            if (badge) badge.textContent = idx + 1;
+                        });
+                    }
+                });
+            },
+        });
+    }
+    {% endif %}
+
+    // ── Notes de séance ──────────────────────────────────────────────────────
+    const notesModal = document.getElementById('notesModal');
+    const notesTextarea = document.getElementById('notes-modal-textarea');
+    const notesTitle    = document.getElementById('notes-modal-point-title');
+    const bsModal = notesModal ? new bootstrap.Modal(notesModal) : null;
+
+    document.querySelectorAll('.btn-notes-point').forEach(btn => {
+        btn.addEventListener('click', function () {
+            currentNotesPk = this.dataset.pk;
+            const pointTitre = this.closest('li').querySelector('strong');
+            notesTitle.textContent = pointTitre ? pointTitre.textContent.trim() : '';
+            notesTextarea.value = this.dataset.notes || '';
+            if (bsModal) bsModal.show();
+        });
+    });
+
+    document.getElementById('btn-save-notes') && document.getElementById('btn-save-notes').addEventListener('click', function () {
+        if (!currentNotesPk) return;
+        const notes = notesTextarea.value.trim();
+        fetch(`/agenda/${currentNotesPk}/notes/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ notes }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            // Mettre à jour l'affichage dans la liste
+            const display = document.getElementById('notes-display-' + currentNotesPk);
+            if (display) {
+                if (notes) {
+                    const textEl = display.querySelector('.notes-text') || display.querySelector('small.d-block.text-dark');
+                    if (textEl) textEl.innerHTML = notes.replace(/\n/g, '<br>');
+                    display.classList.remove('d-none');
+                } else {
+                    display.classList.add('d-none');
+                }
+            }
+            // Mettre à jour data-notes sur le bouton
+            const btn = document.querySelector(`.btn-notes-point[data-pk="${currentNotesPk}"]`);
+            if (btn) btn.dataset.notes = notes;
+            if (bsModal) bsModal.hide();
+        });
+    });
+})();
 </script>
 
 {% endblock %}

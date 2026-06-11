@@ -3,118 +3,316 @@
 {% block title %}Dashboard Administrateur{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="h3 mb-4">
+<style>
+    .pulse-badge {
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0%   { opacity: 1; }
+        50%  { opacity: 0.4; }
+        100% { opacity: 1; }
+    }
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-3px); }
+    .live-indicator { font-size: 0.75rem; color: #6c757d; }
+</style>
+
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="h3 mb-0">
             <i class="fas fa-tachometer-alt text-primary me-2"></i>
             Dashboard Administrateur
+            {% if reunions_ongoing > 0 %}
+            <span class="badge bg-success ms-2 pulse-badge">
+                <i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>
+                {{ reunions_ongoing }} en cours
+            </span>
+            {% endif %}
         </h1>
+    </div>
+    <div class="col-auto d-flex align-items-center gap-2">
+        <span class="live-indicator" id="last-updated-label">
+            <i class="fas fa-sync-alt me-1"></i>
+            <span id="last-updated-time">--:--:--</span>
+        </span>
+        <button class="btn btn-sm btn-outline-secondary" id="toggle-polling" title="Pause/Play auto-refresh">
+            <i class="fas fa-pause" id="polling-icon"></i>
+        </button>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-3 mb-4">
-        <div class="card bg-primary text-white">
+<!-- Ligne 1 : 4 cartes stats dynamiques -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white stat-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3>{{ total_users }}</h3>
-                        <p class="mb-0">Utilisateurs</p>
+                        <h3 id="stat-reunions-today" class="mb-0">{{ reunions_today }}</h3>
+                        <p class="mb-0">Réunions aujourd'hui</p>
+                    </div>
+                    <i class="fas fa-calendar-day fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 id="stat-reunions-ongoing" class="mb-0">{{ reunions_ongoing }}</h3>
+                        <p class="mb-0">En cours</p>
+                    </div>
+                    <i class="fas fa-video fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 id="stat-participants-today" class="mb-0">{{ participants_today }}</h3>
+                        <p class="mb-0">Participants aujourd'hui</p>
                     </div>
                     <i class="fas fa-users fa-2x opacity-75"></i>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-4">
-        <div class="card bg-success text-white">
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white stat-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h3>{{ total_reunions }}</h3>
-                        <p class="mb-0">Réunions</p>
+                        <h3 id="stat-reunions-week" class="mb-0">{{ reunions_this_week }}</h3>
+                        <p class="mb-0">Réunions cette semaine</p>
                     </div>
-                    <i class="fas fa-calendar fa-2x opacity-75"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 mb-4">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h3>0</h3>
-                        <p class="mb-0">En attente</p>
-                    </div>
-                    <i class="fas fa-clock fa-2x opacity-75"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 mb-4">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h3>100%</h3>
-                        <p class="mb-0">Système OK</p>
-                    </div>
-                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    <i class="fas fa-calendar-week fa-2x opacity-75"></i>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Ligne 2 : Graphique + Top organisations -->
+<div class="row mb-4">
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2 text-primary"></i>Réunions par statut</h5>
+                <small class="text-muted">Total : {{ total_reunions }}</small>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="statusChart" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-building me-2 text-primary"></i>Top 5 organisations participantes</h5>
+            </div>
+            <div class="card-body">
+                {% if top_organisations %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Organisation</th>
+                                <th class="text-end">Participants</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for org in top_organisations %}
+                            <tr>
+                                <td><span class="badge bg-primary">{{ forloop.counter }}</span></td>
+                                <td>{{ org.organisation|default:"(Non renseigné)" }}</td>
+                                <td class="text-end"><strong>{{ org.n }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ligne 3 : Actions rapides + Prochaines réunions -->
 <div class="row">
-    <div class="col-lg-8">
+    <div class="col-lg-5 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Actions Rapides</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
+                <div class="row g-2">
+                    <div class="col-6">
                         <a href="{% url 'reunion_create' %}" class="btn btn-primary w-100">
                             <i class="fas fa-plus me-2"></i>Nouvelle Réunion
                         </a>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-6">
                         <a href="{% url 'user_create' %}" class="btn btn-success w-100">
                             <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
                         </a>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-6">
                         <a href="{% url 'reunion_list' %}" class="btn btn-outline-primary w-100">
                             <i class="fas fa-list me-2"></i>Voir Réunions
                         </a>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-6">
                         <a href="{% url 'user_list' %}" class="btn btn-outline-success w-100">
                             <i class="fas fa-users me-2"></i>Gérer Utilisateurs
                         </a>
+                    </div>
+                    <div class="col-12">
+                        <a href="{% url 'stats_by_department' %}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-chart-bar me-2"></i>Stats par direction
+                        </a>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="p-2">
+                            <h4 class="mb-0">{{ total_users }}</h4>
+                            <small class="text-muted">Utilisateurs</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2">
+                            <h4 class="mb-0" id="stat-pending">{{ pending_requests }}</h4>
+                            <small class="text-muted">Demandes en attente</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="col-lg-4">
+
+    <div class="col-lg-7 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Informations Système</h5>
+                <h5 class="mb-0"><i class="fas fa-clock me-2 text-primary"></i>Prochaines réunions planifiées</h5>
             </div>
-            <div class="card-body">
-                <p><strong>Version :</strong> 1.0.0</p>
-                <p><strong>Base de données :</strong> PostgreSQL</p>
-                <p><strong>Statut :</strong> <span class="badge bg-success"> Opérationnel</span></p>
-                <p><strong>Dernière mise à jour :</strong> Aujourd'hui</p>
+            <div class="card-body p-0">
+                {% if prochaines_reunions %}
+                <div class="list-group list-group-flush">
+                    {% for reunion in prochaines_reunions %}
+                    <a href="{% url 'reunion_detail' reunion.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ reunion.titre }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>{{ reunion.date_debut|date:"d/m/Y H:i" }}
+                                    {% if reunion.lieu %}
+                                    &nbsp;|&nbsp;<i class="fas fa-map-marker-alt me-1"></i>{{ reunion.lieu }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <span class="badge bg-primary ms-2">Planifiée</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4 mb-0">Aucune réunion planifiée</p>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Données initiales pour le graphique
+const statusData = {
+    planned:   {{ reunions_by_status.planned }},
+    ongoing:   {{ reunions_by_status.ongoing }},
+    finished:  {{ reunions_by_status.finished }},
+    cancelled: {{ reunions_by_status.cancelled }},
+};
+
+// Graphique doughnut
+const ctx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Planifiées', 'En cours', 'Terminées', 'Annulées'],
+        datasets: [{
+            data: [statusData.planned, statusData.ongoing, statusData.finished, statusData.cancelled],
+            backgroundColor: ['#0d6efd', '#198754', '#6c757d', '#dc3545'],
+            borderWidth: 2,
+            borderColor: '#fff',
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+
+// Polling AJAX toutes les 30s
+let pollingActive = true;
+let pollingInterval = null;
+const apiUrl = "{% url 'api_live_stats' %}";
+
+function refreshStats() {
+    fetch(apiUrl)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('stat-reunions-today').textContent   = data.reunions_today;
+            document.getElementById('stat-reunions-ongoing').textContent = data.reunions_ongoing;
+            document.getElementById('stat-participants-today').textContent = data.participants_today;
+            document.getElementById('stat-reunions-week').textContent   = data.reunions_this_week;
+            document.getElementById('stat-pending').textContent         = data.pending_requests;
+            document.getElementById('last-updated-time').textContent    = data.last_updated;
+
+            // Mise à jour graphique
+            const d = data.reunions_by_status;
+            statusChart.data.datasets[0].data = [d.planned, d.ongoing, d.finished, d.cancelled];
+            statusChart.update();
+        })
+        .catch(() => {});
+}
+
+function startPolling() {
+    refreshStats();
+    pollingInterval = setInterval(refreshStats, 30000);
+    document.getElementById('polling-icon').className = 'fas fa-pause';
+    pollingActive = true;
+}
+
+function stopPolling() {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+    document.getElementById('polling-icon').className = 'fas fa-play';
+    pollingActive = false;
+}
+
+document.getElementById('toggle-polling').addEventListener('click', () => {
+    if (pollingActive) stopPolling(); else startPolling();
+});
+
+// Démarrage immédiat
+startPolling();
+</script>
 {% endblock %}

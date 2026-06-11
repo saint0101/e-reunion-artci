@@ -8,6 +8,9 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('secretary-dashboard/', views.secretary_dashboard, name='secretary_dashboard'),
     
+    # QR Code à la volée (indépendant du stockage media)
+    path('reunion/<int:pk>/qr.png', views.qr_code_image_view, name='qr_code_image'),
+
     # Reunions
     path('reunions/', views.ReunionListView.as_view(), name='reunion_list'),
     path('reunion/<int:pk>/', views.ReunionDetailView.as_view(), name='reunion_detail'),
@@ -41,9 +44,44 @@ urlpatterns = [
 
      # URLs d'annulation
     path('cancel/<str:token>/', views.presence_cancel, name='presence_cancel'),
-    
+
     # URL de debug (à supprimer en production)
     path('debug/secretary-notification/', views.debug_secretary_notification, name='debug_secretary_notification'),
 
+    # Signature numérique
+    path('presence/<uuid:uuid>/signature/<uuid:token>/', views.presence_signature, name='presence_signature'),
 
+    # Agenda
+    path('reunion/<int:reunion_id>/agenda/ajouter/', views.agenda_point_create, name='agenda_point_create'),
+    path('agenda/<int:pk>/modifier/', views.agenda_point_update, name='agenda_point_update'),
+    path('agenda/<int:pk>/supprimer/', views.agenda_point_delete, name='agenda_point_delete'),
+    path('agenda/<int:pk>/toggle/', views.agenda_point_toggle, name='agenda_point_toggle'),
+    path('reunion/<int:reunion_id>/agenda/reorder/', views.agenda_point_reorder, name='agenda_point_reorder'),
+    path('agenda/<int:pk>/notes/', views.agenda_point_notes, name='agenda_point_notes'),
+
+    # Invitations
+    path('reunion/<int:reunion_id>/inviter/', views.invitation_send, name='invitation_send'),
+    path('invitation/<uuid:token>/accepter/', views.invitation_accept, name='invitation_accept'),
+    path('invitation/<uuid:token>/decliner/', views.invitation_decline, name='invitation_decline'),
+
+    # Dashboard live stats
+    path('api/dashboard/live-stats/', views.api_live_stats, name='api_live_stats'),
+
+    # Statistiques par direction
+    path('stats/directions/', views.stats_by_department, name='stats_by_department'),
+    path('stats/directions/csv/', views.stats_by_department_csv, name='stats_by_department_csv'),
+
+    # Tableau de bord personnel
+    path('mes-diligences/', views.mes_diligences, name='mes_diligences'),
+
+    # Stats diligences par direction
+    path('stats/diligences/directions/', views.stats_diligences_directions, name='stats_diligences_directions'),
+
+    # Diligences
+    path('reunion/<int:reunion_id>/diligence/ajouter/', views.diligence_create, name='diligence_create'),
+    path('diligence/<int:pk>/modifier/', views.diligence_update, name='diligence_update'),
+    path('diligence/<int:pk>/supprimer/', views.diligence_delete, name='diligence_delete'),
+    path('diligence/<int:pk>/status/', views.diligence_update_status, name='diligence_update_status'),
+    path('diligence/<int:pk>/commenter/', views.diligence_add_comment, name='diligence_add_comment'),
+    path('reunion/<int:reunion_id>/diligences/export/', views.export_diligences_view, name='export_diligences'),
 ]

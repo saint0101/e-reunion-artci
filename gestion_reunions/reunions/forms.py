@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
+from .models import Reunion, PresenceRequest, CompteRendu, CustomUser, AgendaPoint, Invitation, Diligence, DiligenceComment
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.timezone import localtime
@@ -11,10 +11,11 @@ class CustomUserCreationForm(UserCreationForm):
     last_name = forms.CharField(max_length=30, required=True)
     role = forms.ChoiceField(choices=CustomUser.ROLES, required=True)
     phone = forms.CharField(max_length=15, required=False)
-    
+    direction = forms.CharField(max_length=100, required=False, label="Direction / Service")
+
     class Meta:
         model = CustomUser
-        fields = ('username', 'email', 'first_name', 'last_name', 'role', 'phone', 'password1', 'password2')
+        fields = ('username', 'email', 'first_name', 'last_name', 'role', 'phone', 'direction', 'password1', 'password2')
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,7 +46,7 @@ class ReunionForm(forms.ModelForm):
     
     class Meta:
         model = Reunion
-        fields = ['titre', 'description', 'date_debut', 'date_fin', 'lieu', 'secretaire', 'status']
+        fields = ['titre', 'description', 'date_debut', 'date_fin', 'lieu', 'secretaire', 'status', 'rappels_actives']
         widgets = {
             'titre': forms.TextInput(attrs={
                 'class': 'form-control', 
@@ -62,6 +63,7 @@ class ReunionForm(forms.ModelForm):
             }),
             'secretaire': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
+            'rappels_actives': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -327,3 +329,113 @@ class PresenceARTCIFallbackForm(PresenceDirectForm):
         if not re.match(r'^[\d\s\-\+\(\)\.]+$', contact):
             raise ValidationError("Format de numéro de téléphone invalide.")
         return contact
+
+
+class AgendaPointForm(forms.ModelForm):
+    class Meta:
+        model = AgendaPoint
+        fields = ['ordre', 'titre', 'description', 'duree_minutes', 'responsable_interne', 'responsable_externe', 'notes_seance']
+        widgets = {
+            'ordre': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'titre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Titre du point'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description optionnelle'}),
+            'duree_minutes': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'placeholder': 'Ex: 30'}),
+            'responsable_interne': forms.Select(attrs={'class': 'form-control'}),
+            'responsable_externe': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom du responsable externe'}),
+            'notes_seance': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Notes prises durant la réunion sur ce point…'}),
+        }
+        labels = {
+            'duree_minutes': 'Durée',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['responsable_interne'].queryset = CustomUser.objects.all().order_by('last_name', 'first_name')
+        self.fields['responsable_interne'].empty_label = "— Aucun —"
+        self.fields['responsable_interne'].required = False
+
+
+class InvitationBulkForm(forms.Form):
+    emails = forms.CharField(
+        label="Adresses email",
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 6,
+            'placeholder': 'Un email par ligne, ou séparés par des virgules\nex: jean.dupont@example.com\nmarie.martin@example.com',
+        }),
+        help_text="Saisissez un ou plusieurs emails (un par ligne ou séparés par des virgules)."
+    )
+
+    def clean_emails(self):
+        import re
+        raw = self.cleaned_data['emails']
+        # Normaliser : remplacer virgules et espaces multiples par retours à la ligne
+        entries = re.split(r'[,\n\r]+', raw)
+        valid_emails = []
+        invalid = []
+        seen = set()
+        for entry in entries:
+            email = entry.strip().lower()
+            if not email:
+                continue
+            if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+                invalid.append(email)
+            elif email not in seen:
+                valid_emails.append(email)
+                seen.add(email)
+        if invalid:
+            raise ValidationError(f"Adresses invalides : {', '.join(invalid)}")
+        if not valid_emails:
+            raise ValidationError("Veuillez saisir au moins une adresse email valide.")
+        return valid_emails
+
+
+class DiligenceForm(forms.ModelForm):
+    class Meta:
+        model = Diligence
+        fields = ['titre', 'description', 'responsable_interne', 'responsable_externe', 'echeance', 'priorite']
+        widgets = {
+            'titre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Intitulé de la diligence',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Description détaillée (optionnel)',
+            }),
+            'responsable_interne': forms.Select(attrs={'class': 'form-control'}),
+            'responsable_externe': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nom du responsable externe',
+            }),
+            'echeance': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+            }),
+            'priorite': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['responsable_interne'].queryset = CustomUser.objects.all().order_by('last_name', 'first_name')
+        self.fields['responsable_interne'].empty_label = "— Aucun —"
+        self.fields['responsable_interne'].required = False
+
+
+class DiligenceCommentForm(forms.Form):
+    contenu = forms.CharField(
+        label="Commentaire",
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Ajouter un commentaire (optionnel)',
+        }),
+    )
+    nouveau_status = forms.ChoiceField(
+        label="Changer le statut",
+        choices=[('', '— Conserver le statut actuel —')] + Diligence.STATUS,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )

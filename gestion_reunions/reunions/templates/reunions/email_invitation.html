@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitation — {{ reunion.titre }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; color: #333; }
+        .wrapper { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+        .header { background: linear-gradient(135deg, #FF6B35, #f7931e); padding: 32px 24px; text-align: center; color: #fff; }
+        .header h1 { margin: 0 0 8px; font-size: 22px; }
+        .header p { margin: 0; opacity: .9; font-size: 14px; }
+        .body { padding: 28px 28px 20px; }
+        .info-box { background: #fff8f0; border-left: 4px solid #FF6B35; border-radius: 4px; padding: 16px 20px; margin-bottom: 24px; }
+        .info-box p { margin: 6px 0; font-size: 15px; }
+        .info-box strong { color: #FF6B35; }
+        .btn-row { text-align: center; margin: 28px 0 8px; }
+        .btn-accept { display: inline-block; background: #28a745; color: #fff; padding: 14px 36px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; margin: 0 8px 8px; }
+        .btn-decline { display: inline-block; background: #6c757d; color: #fff; padding: 14px 36px; border-radius: 6px; text-decoration: none; font-size: 16px; margin: 0 8px 8px; }
+        .footer { background: #f4f4f4; padding: 14px 24px; text-align: center; font-size: 12px; color: #aaa; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>✉️ Vous êtes invité(e) !</h1>
+        <p>Une réunion attend votre confirmation</p>
+    </div>
+    <div class="body">
+        <p>Bonjour{% if invitation.prenom %} <strong>{{ invitation.prenom }}</strong>{% endif %},</p>
+        <p>
+            {% if invitation.invited_by %}
+                <strong>{{ invitation.invited_by.first_name }} {{ invitation.invited_by.last_name }}</strong> vous invite à participer à la réunion suivante :
+            {% else %}
+                Vous êtes invité(e) à participer à la réunion suivante :
+            {% endif %}
+        </p>
+
+        <div class="info-box">
+            <p><strong>Réunion :</strong> {{ reunion.titre }}</p>
+            <p><strong>Date :</strong> {{ reunion.date_debut|date:"l d/m/Y à H:i" }}</p>
+            <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+        </div>
+
+        <p>Merci de confirmer votre participation en cliquant sur l'un des boutons ci-dessous :</p>
+
+        <div class="btn-row">
+            <a href="{{ accept_url }}" class="btn-accept">✅ Accepter</a>
+            <a href="{{ decline_url }}" class="btn-decline">❌ Décliner</a>
+        </div>
+
+        <p style="font-size:13px; color:#888; text-align:center;">
+            Si vous ne pouvez pas cliquer sur les boutons, copiez ce lien dans votre navigateur :<br>
+            <a href="{{ accept_url }}" style="color:#FF6B35; word-break:break-all;">{{ accept_url }}</a>
+        </p>
+    </div>
+    <div class="footer">
+        Ce message a été envoyé automatiquement par QR Meeting — ARTCI.<br>
+        Merci de ne pas répondre à cet email.
+    </div>
+</div>
+</body>
+</html>

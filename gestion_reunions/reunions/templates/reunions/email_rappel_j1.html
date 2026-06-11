@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rappel — {{ reunion.titre }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; color: #333; }
+        .wrapper { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+        .header { background: linear-gradient(135deg, #FF6B35, #f7931e); padding: 32px 24px; text-align: center; color: #fff; }
+        .header h1 { margin: 0 0 8px; font-size: 22px; }
+        .header p { margin: 0; opacity: .9; font-size: 14px; }
+        .body { padding: 28px 28px 20px; }
+        .info-box { background: #fff8f0; border-left: 4px solid #FF6B35; border-radius: 4px; padding: 16px 20px; margin-bottom: 24px; }
+        .info-box p { margin: 6px 0; font-size: 15px; }
+        .info-box strong { color: #FF6B35; }
+        .agenda-section { margin-top: 24px; }
+        .agenda-section h3 { font-size: 16px; color: #555; margin-bottom: 12px; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .agenda-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .agenda-num { background: #FF6B35; color: #fff; font-weight: bold; font-size: 13px; min-width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .agenda-text { flex: 1; }
+        .agenda-text strong { font-size: 14px; }
+        .agenda-text small { color: #888; font-size: 12px; }
+        .cancel-box { margin-top: 28px; padding: 16px; background: #f9f9f9; border-radius: 6px; text-align: center; font-size: 13px; color: #888; }
+        .cancel-box a { color: #888; }
+        .footer { background: #f4f4f4; padding: 14px 24px; text-align: center; font-size: 12px; color: #aaa; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>📅 Rappel de réunion — Demain</h1>
+        <p>Ne manquez pas cet événement</p>
+    </div>
+    <div class="body">
+        <p>Bonjour{% if participant.prenom %} <strong>{{ participant.prenom }}</strong>{% endif %},</p>
+        <p>Nous vous rappelons que vous êtes inscrit(e) à la réunion suivante qui se tient <strong>demain</strong> :</p>
+
+        <div class="info-box">
+            <p><strong>Réunion :</strong> {{ reunion.titre }}</p>
+            <p><strong>Date :</strong> {{ reunion.date_debut|date:"l d/m/Y à H:i" }}</p>
+            <p><strong>Lieu :</strong> {{ reunion.lieu }}</p>
+        </div>
+
+        {% if agenda_points %}
+        <div class="agenda-section">
+            <h3>Ordre du jour</h3>
+            {% for point in agenda_points %}
+            <div class="agenda-item">
+                <div class="agenda-num">{{ point.ordre }}</div>
+                <div class="agenda-text">
+                    <strong>{{ point.titre }}</strong>
+                    {% if point.duree_minutes %}<small> — {{ point.duree_minutes }} min</small>{% endif %}
+                    {% if point.responsable_interne or point.responsable_externe %}
+                    <br><small>Responsable :
+                        {% if point.responsable_interne %}{{ point.responsable_interne.get_full_name|default:point.responsable_interne.username }}
+                        {% else %}{{ point.responsable_externe }}{% endif %}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if cancellation_url %}
+        <div class="cancel-box">
+            Vous ne pouvez plus participer ?
+            <a href="{{ cancellation_url }}">Annulez votre inscription ici</a>.
+        </div>
+        {% endif %}
+    </div>
+    <div class="footer">
+        Ce message a été envoyé automatiquement par QR Meeting — ARTCI.<br>
+        Merci de ne pas répondre à cet email.
+    </div>
+</div>
+</body>
+</html>

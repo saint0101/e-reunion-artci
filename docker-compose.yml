@@ -12,8 +12,8 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db_backup:/backup
-    ports:
-      - "127.0.0.1:5432:5432"
+    #ports:
+    #  - "127.0.0.1:5432:5432"
     networks:
       - edcp_network
     healthcheck:
@@ -26,8 +26,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: artci_redis
-    ports:
-      - "127.0.0.1:6379:6379"
+    # ports:
+    #  - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -84,12 +84,17 @@ services:
       DJANGO_SUPERUSER_USERNAME: "admin"
       DJANGO_SUPERUSER_EMAIL: "admin@artci.ci"
       DJANGO_SUPERUSER_PASSWORD: "admin123"
-      
+
+      # Fichiers media et statiques
+      MEDIA_ROOT: /app/media
+      STATIC_ROOT: /app/staticfiles
+      SERVE_MEDIA_FILES: "True"
+
     volumes:
       - ./media:/app/media
       - ./static:/app/static
       - ./logs:/app/logs
-      - staticfiles_volume:/app/staticfiles
+      - ./staticfiles:/app/staticfiles
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -109,11 +114,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./staticfiles:/staticfiles:ro
-      - ./media:/media:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+    #  - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./staticfiles:/app/staticfiles:ro
+      - ./media:/app/media:ro
+    #  - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./nginx/logs:/var/log/nginx
     depends_on:
       - web
@@ -126,8 +130,6 @@ volumes:
   pgdata:
     driver: local
   redis_data:
-    driver: local
-  staticfiles_volume:
     driver: local
 
 # Réseau

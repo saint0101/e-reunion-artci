@@ -112,6 +112,22 @@
                     <input type="hidden" name="status" value="planned">
                     {% endif %}
 
+                    <!-- Rappels email -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            {{ form.rappels_actives }}
+                            <label class="form-check-label fw-semibold" for="{{ form.rappels_actives.id_for_label }}">
+                                <i class="fas fa-bell me-1 text-primary"></i>Activer les rappels email automatiques
+                            </label>
+                        </div>
+                        <div class="form-text text-muted">
+                            Si activé, un rappel J-1 sera envoyé automatiquement à tous les participants confirmés.
+                        </div>
+                        {% if form.rappels_actives.errors %}
+                            <div class="text-danger small mt-1">{{ form.rappels_actives.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
                     <!-- Erreurs globales -->
                     {% if form.non_field_errors %}
                         <div class="alert alert-danger">

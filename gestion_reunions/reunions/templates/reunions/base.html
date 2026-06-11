@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}QR Meeting{% endblock %}</title>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#FF6B35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="eRéunion">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <!-- /PWA -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -69,13 +78,22 @@
                 QR Meeting 
             </a>
             
-            <div class="navbar-nav ms-auto">
+            <div class="navbar-nav ms-auto align-items-center gap-1">
                 {% if user.is_authenticated %}
-                    <span class="navbar-text me-3">
-                        Bonjour, {{ user.first_name|default:user.username }}
+                    <a class="nav-link" href="{% url 'mes_diligences' %}" title="Mes diligences">
+                        <i class="fas fa-tasks text-warning"></i>
+                        <span class="d-none d-md-inline ms-1">Mes diligences</span>
+                    </a>
+                    <span class="navbar-text text-muted d-none d-md-inline mx-2">|</span>
+                    <span class="navbar-text me-2 d-none d-md-inline">
+                        {{ user.first_name|default:user.username }}
                     </span>
+                    <!-- Bouton Install PWA (affiché uniquement si disponible) -->
+                    <button id="btn-install-pwa" class="btn btn-sm btn-outline-warning d-none me-1" title="Installer l'application">
+                        <i class="fas fa-download me-1"></i><span class="d-none d-md-inline">Installer</span>
+                    </button>
                     <a class="nav-link" href="{% url 'logout' %}">
-                        <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
+                        <i class="fas fa-sign-out-alt me-1"></i><span class="d-none d-md-inline">Déconnexion</span>
                     </a>
                 {% else %}
                     <a class="nav-link" href="{% url 'login' %}">
@@ -155,6 +173,42 @@
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     {% block extra_js %}{% endblock %}
+
+    <!-- PWA : Service Worker + Install prompt -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(err => console.warn('SW non enregistré :', err));
+        });
+    }
+
+    // Bouton d'installation
+    let deferredPrompt;
+    const btnInstall = document.getElementById('btn-install-pwa');
+
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (btnInstall) btnInstall.classList.remove('d-none');
+    });
+
+    if (btnInstall) {
+        btnInstall.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') btnInstall.classList.add('d-none');
+            deferredPrompt = null;
+        });
+    }
+
+    window.addEventListener('appinstalled', () => {
+        if (btnInstall) btnInstall.classList.add('d-none');
+        deferredPrompt = null;
+    });
+    </script>
 </body>
 </html>

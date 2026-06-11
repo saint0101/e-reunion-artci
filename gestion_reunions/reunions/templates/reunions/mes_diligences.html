@@ -1,0 +1,300 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Mes Diligences{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="fas fa-tasks text-warning me-2"></i>Mes Diligences
+        </h1>
+        <p class="text-muted mb-0 small">Actions qui vous sont assignées, toutes réunions confondues</p>
+    </div>
+</div>
+
+<!-- Cartes résumé -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body py-3">
+                <div class="fs-3 fw-bold text-secondary">{{ stats.total }}</div>
+                <div class="small text-muted">Total</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm h-100 {% if stats.en_retard %}border-danger border{% endif %}">
+            <div class="card-body py-3">
+                <div class="fs-3 fw-bold text-danger">{{ stats.en_retard }}</div>
+                <div class="small text-muted">En retard</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body py-3">
+                <div class="fs-3 fw-bold text-primary">{{ stats.en_cours }}</div>
+                <div class="small text-muted">En cours</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body py-3">
+                <div class="fs-3 fw-bold text-success">{{ stats.terminees }}</div>
+                <div class="small text-muted">Terminées</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre par statut -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <span class="small text-muted me-1"><i class="fas fa-filter me-1"></i>Filtrer :</span>
+            <a href="{% url 'mes_diligences' %}"
+               class="btn btn-sm {% if not status_filtre %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+                Toutes <span class="badge bg-light text-dark ms-1">{{ stats.total }}</span>
+            </a>
+            <a href="?status=open"
+               class="btn btn-sm {% if status_filtre == 'open' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+                À faire <span class="badge bg-light text-dark ms-1">{{ stats.a_faire }}</span>
+            </a>
+            <a href="?status=in_progress"
+               class="btn btn-sm {% if status_filtre == 'in_progress' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                En cours <span class="badge bg-light text-dark ms-1">{{ stats.en_cours }}</span>
+            </a>
+            <a href="?status=completed"
+               class="btn btn-sm {% if status_filtre == 'completed' %}btn-success{% else %}btn-outline-success{% endif %}">
+                Terminées <span class="badge bg-light text-dark ms-1">{{ stats.terminees }}</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if diligences %}
+<div class="row g-3">
+    {% for d in diligences %}
+    {% with is_overdue=d.is_overdue %}
+    <div class="col-12" id="dil-card-{{ d.pk }}">
+        <div class="card border-0 shadow-sm {% if is_overdue and d.status != 'completed' and d.status != 'cancelled' %}border-start border-danger border-3{% elif d.status == 'completed' %}border-start border-success border-3{% elif d.status == 'in_progress' %}border-start border-primary border-3{% else %}border-start border-secondary border-3{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <!-- Priorité -->
+                    <div class="flex-shrink-0 mt-1">
+                        {% if d.priorite == 'high' %}
+                        <span class="badge bg-danger" title="Urgente"><i class="fas fa-flag"></i></span>
+                        {% elif d.priorite == 'medium' %}
+                        <span class="badge bg-warning text-dark" title="Normale"><i class="fas fa-flag"></i></span>
+                        {% else %}
+                        <span class="badge bg-light text-muted border" title="Faible"><i class="fas fa-flag"></i></span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Contenu principal -->
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                            <strong class="{% if d.status == 'completed' or d.status == 'cancelled' %}text-muted text-decoration-line-through{% endif %}">
+                                {{ d.titre }}
+                            </strong>
+
+                            <!-- Badge statut (cliquable) -->
+                            <button class="btn btn-sm p-0 border-0 btn-mes-dil-status"
+                                    data-pk="{{ d.pk }}"
+                                    data-status="{{ d.status }}"
+                                    title="Changer le statut"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalMesDilStatus">
+                                <span class="badge
+                                    {% if d.status == 'open' %}bg-secondary
+                                    {% elif d.status == 'in_progress' %}bg-primary
+                                    {% elif d.status == 'completed' %}bg-success
+                                    {% else %}bg-danger{% endif %}"
+                                    id="mes-dil-badge-{{ d.pk }}">
+                                    {{ d.get_status_display }}
+                                </span>
+                            </button>
+
+                            {% if is_overdue and d.status not in 'completed,cancelled' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">
+                                <i class="fas fa-exclamation-triangle me-1"></i>En retard
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        {% if d.description %}
+                        <p class="text-muted small mb-2">{{ d.description }}</p>
+                        {% endif %}
+
+                        <div class="d-flex flex-wrap gap-3 align-items-center">
+                            <!-- Réunion d'origine -->
+                            <a href="{% url 'reunion_detail' d.reunion.pk %}" class="text-decoration-none">
+                                <small class="text-primary">
+                                    <i class="fas fa-calendar-alt me-1"></i>{{ d.reunion.titre }}
+                                </small>
+                            </a>
+                            <!-- Échéance -->
+                            {% if d.echeance %}
+                            <small class="{% if is_overdue and d.status not in 'completed,cancelled' %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                                <i class="fas fa-calendar-day me-1"></i>
+                                Échéance : {{ d.echeance|date:"d/m/Y" }}
+                                {% if d.echeance == today %}<strong>(aujourd'hui)</strong>{% endif %}
+                            </small>
+                            {% endif %}
+                            <!-- Commentaires -->
+                            {% if d.commentaires.count > 0 %}
+                            <small class="text-muted">
+                                <i class="fas fa-comment me-1"></i>{{ d.commentaires.count }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Lien vers la réunion -->
+                    <div class="flex-shrink-0">
+                        <a href="{% url 'reunion_detail' d.reunion.pk %}#diligences"
+                           class="btn btn-outline-secondary btn-sm" title="Voir dans la réunion">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+        {% if status_filtre %}
+        <p class="text-muted mb-0">Aucune diligence avec ce statut.</p>
+        <a href="{% url 'mes_diligences' %}" class="btn btn-outline-secondary btn-sm mt-3">Voir toutes</a>
+        {% else %}
+        <p class="text-muted mb-0">Aucune diligence ne vous est assignée pour l'instant.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal changement de statut -->
+<div class="modal fade" id="modalMesDilStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt me-2 text-warning"></i>Changer le statut
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3" id="mes-dil-modal-titre"></p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nouveau statut</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-secondary btn-mes-status-choice" data-val="open">À faire</button>
+                        <button class="btn btn-outline-primary btn-mes-status-choice" data-val="in_progress">En cours</button>
+                        <button class="btn btn-outline-success btn-mes-status-choice" data-val="completed">Terminée</button>
+                        <button class="btn btn-outline-danger btn-mes-status-choice" data-val="cancelled">Annulée</button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Commentaire <small class="text-muted fw-normal">(optionnel)</small></label>
+                    <textarea id="mes-dil-modal-comment" class="form-control" rows="3"
+                              placeholder="Précisez la raison..."></textarea>
+                </div>
+                <div id="mes-dil-modal-feedback" class="mt-2" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning text-white" id="btn-mes-dil-confirm">
+                    <i class="fas fa-save me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const csrf = '{{ csrf_token }}';
+    let currentPk = null, selectedStatus = null;
+    const STATUS_LABELS  = { open:'À faire', in_progress:'En cours', completed:'Terminée', cancelled:'Annulée' };
+    const STATUS_CLASSES = { open:'bg-secondary', in_progress:'bg-primary', completed:'bg-success', cancelled:'bg-danger' };
+
+    document.querySelectorAll('.btn-mes-dil-status').forEach(btn => {
+        btn.addEventListener('click', function () {
+            currentPk = this.dataset.pk;
+            selectedStatus = this.dataset.status;
+            const titre = this.closest('.card').querySelector('strong').textContent.trim();
+            document.getElementById('mes-dil-modal-titre').textContent = titre;
+            document.getElementById('mes-dil-modal-comment').value = '';
+            document.getElementById('mes-dil-modal-feedback').style.display = 'none';
+            document.querySelectorAll('.btn-mes-status-choice').forEach(b =>
+                b.classList.toggle('active', b.dataset.val === selectedStatus));
+        });
+    });
+
+    document.querySelectorAll('.btn-mes-status-choice').forEach(b => {
+        b.addEventListener('click', function () {
+            selectedStatus = this.dataset.val;
+            document.querySelectorAll('.btn-mes-status-choice').forEach(x => x.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    document.getElementById('btn-mes-dil-confirm')?.addEventListener('click', function () {
+        if (!currentPk || !selectedStatus) return;
+        const commentaire = document.getElementById('mes-dil-modal-comment').value.trim();
+        const feedback = document.getElementById('mes-dil-modal-feedback');
+        this.disabled = true;
+
+        fetch(`/diligence/${currentPk}/status/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: selectedStatus, commentaire }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            if (!data.success) {
+                feedback.className = 'mt-2 alert alert-danger py-2';
+                feedback.textContent = data.error || 'Erreur';
+                feedback.style.display = 'block';
+                return;
+            }
+            // Mettre à jour le badge
+            const badge = document.querySelector(`#mes-dil-badge-${currentPk}`);
+            if (badge) {
+                badge.className = 'badge ' + (STATUS_CLASSES[data.status] || 'bg-secondary');
+                badge.textContent = STATUS_LABELS[data.status] || data.status;
+            }
+            const btn = document.querySelector(`#dil-card-${currentPk} .btn-mes-dil-status`);
+            if (btn) btn.dataset.status = data.status;
+
+            // Barrer le titre si terminée/annulée
+            const titre = document.querySelector(`#dil-card-${currentPk} strong`);
+            if (titre) {
+                if (['completed','cancelled'].includes(data.status)) {
+                    titre.classList.add('text-muted', 'text-decoration-line-through');
+                } else {
+                    titre.classList.remove('text-muted', 'text-decoration-line-through');
+                }
+            }
+            bootstrap.Modal.getInstance(document.getElementById('modalMesDilStatus')).hide();
+        })
+        .catch(() => {
+            this.disabled = false;
+            feedback.className = 'mt-2 alert alert-danger py-2';
+            feedback.textContent = 'Erreur réseau.';
+            feedback.style.display = 'block';
+        });
+    });
+})();
+</script>
+{% endblock %}

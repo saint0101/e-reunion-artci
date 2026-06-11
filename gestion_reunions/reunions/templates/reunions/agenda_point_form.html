@@ -1,0 +1,97 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}{{ action }} un point — {{ reunion.titre }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="fas fa-list-ol text-primary fa-lg"></i>
+                <h4 class="mb-0">{{ action }} un point d'ordre du jour</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    Réunion : <strong>{{ reunion.titre }}</strong>
+                </p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-2 mb-3">
+                            <label for="{{ form.ordre.id_for_label }}" class="form-label fw-semibold">Ordre</label>
+                            {{ form.ordre }}
+                            {% if form.ordre.errors %}<div class="text-danger small mt-1">{{ form.ordre.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-10 mb-3">
+                            <label for="{{ form.titre.id_for_label }}" class="form-label fw-semibold">
+                                Titre <span class="text-danger">*</span>
+                            </label>
+                            {{ form.titre }}
+                            {% if form.titre.errors %}<div class="text-danger small mt-1">{{ form.titre.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">Description</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.duree_minutes.id_for_label }}" class="form-label fw-semibold">
+                                Durée
+                            </label>
+                            <div class="input-group">
+                                {{ form.duree_minutes }}
+                                <span class="input-group-text">min</span>
+                            </div>
+                            {% if form.duree_minutes.errors %}<div class="text-danger small mt-1">{{ form.duree_minutes.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label for="{{ form.responsable_interne.id_for_label }}" class="form-label fw-semibold">
+                                Responsable (interne)
+                            </label>
+                            {{ form.responsable_interne }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.responsable_externe.id_for_label }}" class="form-label fw-semibold">
+                            Responsable (externe)
+                        </label>
+                        {{ form.responsable_externe }}
+                        <div class="form-text text-muted">Renseignez ce champ si le responsable n'est pas dans le système.</div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between pt-2 border-top">
+                        <a href="{% url 'reunion_detail' reunion.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-save me-2"></i>{{ action }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

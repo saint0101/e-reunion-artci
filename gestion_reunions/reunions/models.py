@@ -8,6 +8,7 @@ from io import BytesIO
 from django.core.files import File
 from PIL import Image
 import os
+from uuid import uuid4
 
 class CustomUser(AbstractUser):
     ROLES = (
@@ -17,6 +18,7 @@ class CustomUser(AbstractUser):
     )
     role = models.CharField(max_length=20, choices=ROLES, default='participant')
     phone = models.CharField(max_length=15, blank=True)
+    direction = models.CharField(max_length=100, blank=True, verbose_name="Direction / Service")
     must_change_password = models.BooleanField(default=False, help_text="Force le changement de mot de passe à la prochaine connexion")
     
     # Résoudre les conflits de reverse accessor
@@ -57,6 +59,8 @@ class Reunion(models.Model):
     secretaire = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, 
                                   limit_choices_to={'role': 'secretary'})
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planned')
+    rappels_actives = models.BooleanField(default=True, verbose_name="Rappels email actifs")
+    rappel_j1_envoye = models.BooleanField(default=False, verbose_name="Rappel J-1 envoyé")
     qr_code_uuid = models.UUIDField(default=uuid.uuid4, unique=True)
     qr_code_image = models.ImageField(upload_to='qr_codes/', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -306,7 +310,8 @@ class PresenceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     auto_confirm_at = models.DateTimeField(null=True, blank=True)  # NOUVEAU: Heure de confirmation automatique
-    
+    signature = models.ImageField(upload_to='signatures/', null=True, blank=True, verbose_name="Signature numérique")
+
     class Meta:
         unique_together = ('reunion', 'email')
         verbose_name = 'Demande de présence'
@@ -372,3 +377,130 @@ class CancellationLog(models.Model):
     
     def __str__(self):
         return f"Annulation - {self.presence_request.email} - {self.cancelled_at.strftime('%d/%m/%Y %H:%M')}"
+
+
+class AgendaPoint(models.Model):
+    reunion = models.ForeignKey(Reunion, on_delete=models.CASCADE, related_name='agenda_points')
+    ordre = models.PositiveIntegerField(default=1, verbose_name="Ordre")
+    titre = models.CharField(max_length=200, verbose_name="Titre")
+    description = models.TextField(blank=True, verbose_name="Description")
+    duree_minutes = models.PositiveIntegerField(null=True, blank=True, verbose_name="Durée (min)")
+    responsable_interne = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='points_responsable', verbose_name="Responsable interne"
+    )
+    responsable_externe = models.CharField(max_length=200, blank=True, verbose_name="Responsable externe")
+    est_traite = models.BooleanField(default=False, verbose_name="Traité")
+    notes_seance = models.TextField(blank=True, verbose_name="Notes de séance", help_text="Notes prises durant la réunion sur ce point")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['ordre']
+        verbose_name = "Point d'agenda"
+        verbose_name_plural = "Points d'agenda"
+
+    def __str__(self):
+        return f"{self.ordre}. {self.titre} ({self.reunion.titre})"
+
+
+class Diligence(models.Model):
+    STATUS = [
+        ('open', 'À faire'),
+        ('in_progress', 'En cours'),
+        ('completed', 'Terminée'),
+        ('cancelled', 'Annulée'),
+    ]
+    PRIORITY = [
+        ('low', 'Faible'),
+        ('medium', 'Normale'),
+        ('high', 'Urgente'),
+    ]
+
+    reunion = models.ForeignKey(Reunion, on_delete=models.CASCADE, related_name='diligences')
+    titre = models.CharField(max_length=255, verbose_name="Titre")
+    description = models.TextField(blank=True, verbose_name="Description")
+    responsable_interne = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='diligences_assignees', verbose_name="Responsable interne"
+    )
+    responsable_externe = models.CharField(max_length=200, blank=True, verbose_name="Responsable externe")
+    echeance = models.DateField(null=True, blank=True, verbose_name="Échéance")
+    status = models.CharField(max_length=20, choices=STATUS, default='open', verbose_name="Statut")
+    priorite = models.CharField(max_length=10, choices=PRIORITY, default='medium', verbose_name="Priorité")
+    created_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True,
+        related_name='diligences_creees', verbose_name="Créée par"
+    )
+    rappel_j3_envoye = models.BooleanField(default=False, verbose_name="Rappel J-3 envoyé")
+    rappel_j1_envoye = models.BooleanField(default=False, verbose_name="Rappel J-1 envoyé")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-priorite', 'echeance', 'created_at']
+        verbose_name = "Diligence"
+        verbose_name_plural = "Diligences"
+
+    def __str__(self):
+        return f"{self.titre} ({self.get_status_display()}) — {self.reunion.titre}"
+
+    def get_responsable_display(self):
+        if self.responsable_interne:
+            u = self.responsable_interne
+            return f"{u.first_name} {u.last_name}".strip() or u.username
+        return self.responsable_externe or "—"
+
+    def is_overdue(self):
+        if self.echeance and self.status not in ('completed', 'cancelled'):
+            from django.utils import timezone
+            return self.echeance < timezone.now().date()
+        return False
+
+
+class DiligenceComment(models.Model):
+    diligence = models.ForeignKey(Diligence, on_delete=models.CASCADE, related_name='commentaires')
+    auteur = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='commentaires_diligences')
+    contenu = models.TextField(verbose_name="Commentaire")
+    ancien_status = models.CharField(max_length=20, blank=True)
+    nouveau_status = models.CharField(max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = "Commentaire de diligence"
+        verbose_name_plural = "Commentaires de diligences"
+
+    def __str__(self):
+        return f"Commentaire de {self.auteur} sur {self.diligence.titre}"
+
+    def is_status_change(self):
+        return bool(self.ancien_status and self.nouveau_status and self.ancien_status != self.nouveau_status)
+
+
+class Invitation(models.Model):
+    STATUS = [
+        ('pending', 'En attente'),
+        ('sent', 'Envoyée'),
+        ('accepted', 'Acceptée'),
+        ('declined', 'Déclinée'),
+    ]
+    reunion = models.ForeignKey(Reunion, on_delete=models.CASCADE, related_name='invitations')
+    email = models.EmailField(verbose_name="Email")
+    nom = models.CharField(max_length=100, blank=True, verbose_name="Nom")
+    prenom = models.CharField(max_length=100, blank=True, verbose_name="Prénom")
+    token = models.UUIDField(default=uuid4, unique=True, verbose_name="Token")
+    status = models.CharField(max_length=20, choices=STATUS, default='pending', verbose_name="Statut")
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name="Envoyée le")
+    invited_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True,
+        related_name='invitations_sent', verbose_name="Invité par"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('reunion', 'email')]
+        verbose_name = "Invitation"
+        verbose_name_plural = "Invitations"
+
+    def __str__(self):
+        return f"Invitation {self.email} → {self.reunion.titre} ({self.get_status_display()})"

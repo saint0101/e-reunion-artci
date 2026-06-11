@@ -1,0 +1,152 @@
+{% extends 'reunions/base.html' %}
+
+{% block title %}Taux de réalisation des diligences par direction{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="fas fa-chart-bar text-warning me-2"></i>Diligences par direction
+        </h1>
+        <p class="text-muted mb-0 small">Taux de réalisation des actions de suivi par direction / service</p>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtres</h5></div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Créées à partir du</label>
+                <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Créées jusqu'au</label>
+                <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="fas fa-search me-1"></i>Filtrer
+                </button>
+                <a href="{% url 'stats_diligences_directions' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if stats %}
+<!-- Graphique -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Répartition par direction</h5></div>
+    <div class="card-body">
+        <canvas id="dilChart" style="max-height:350px;"></canvas>
+    </div>
+</div>
+
+<!-- Tableau -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-table me-2"></i>Détail par direction</h5></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Direction / Service</th>
+                        <th class="text-center">Total</th>
+                        <th class="text-center text-secondary">À faire</th>
+                        <th class="text-center text-primary">En cours</th>
+                        <th class="text-center text-success">Terminées</th>
+                        <th class="text-center text-danger">En retard</th>
+                        <th>Taux de réalisation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in stats %}
+                    <tr>
+                        <td class="fw-semibold">{{ s.direction }}</td>
+                        <td class="text-center">{{ s.total }}</td>
+                        <td class="text-center text-muted">{{ s.a_faire }}</td>
+                        <td class="text-center text-primary">{{ s.en_cours }}</td>
+                        <td class="text-center text-success fw-semibold">{{ s.terminees }}</td>
+                        <td class="text-center {% if s.en_retard > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                            {{ s.en_retard }}
+                        </td>
+                        <td style="min-width:160px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:10px;">
+                                    <div class="progress-bar
+                                        {% if s.taux >= 80 %}bg-success
+                                        {% elif s.taux >= 50 %}bg-warning
+                                        {% else %}bg-danger{% endif %}"
+                                        style="width:{{ s.taux }}%"></div>
+                                </div>
+                                <span class="small fw-semibold
+                                    {% if s.taux >= 80 %}text-success
+                                    {% elif s.taux >= 50 %}text-warning
+                                    {% else %}text-danger{% endif %}">
+                                    {{ s.taux }}%
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+        <p class="text-muted mb-0">Aucune donnée disponible. Assignez des responsables internes aux diligences et renseignez leur direction dans leur profil.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if stats %}
+<script>
+const ctx = document.getElementById('dilChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_labels_json|safe }},
+        datasets: [
+            {
+                label: 'Terminées',
+                data: {{ chart_terminees_json|safe }},
+                backgroundColor: 'rgba(40,167,69,0.8)',
+            },
+            {
+                label: 'En cours',
+                data: {{ chart_en_cours_json|safe }},
+                backgroundColor: 'rgba(13,110,253,0.7)',
+            },
+            {
+                label: 'À faire',
+                data: {{ chart_a_faire_json|safe }},
+                backgroundColor: 'rgba(108,117,125,0.5)',
+            },
+        ],
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'top' },
+            tooltip: { mode: 'index', intersect: false },
+        },
+        scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } },
+        },
+    },
+});
+</script>
+{% endif %}
+{% endblock %}

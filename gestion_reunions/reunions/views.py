@@ -9,10 +9,12 @@ from django.utils import timezone
 from django.db.models import Count, Q
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
-from .forms import ReunionForm, PresenceForm, CompteRenduForm, PresenceDirectForm, PresenceForm, PresenceValidationForm, PresenceARTCIFallbackForm
+from .models import Reunion, PresenceRequest, CompteRendu, CustomUser, AgendaPoint, Invitation, Diligence, DiligenceComment
+from .forms import ReunionForm, PresenceForm, CompteRenduForm, PresenceDirectForm, PresenceForm, PresenceValidationForm, PresenceARTCIFallbackForm, AgendaPointForm, InvitationBulkForm, DiligenceForm, DiligenceCommentForm
 from .utils import generate_presence_report, send_compte_rendu_email
 import json
+import io
+import qrcode
 from email.utils import formataddr
 from datetime import timedelta
 import uuid
@@ -44,33 +46,117 @@ def dashboard(request):
         return participant_dashboard(request)
 
 @login_required
-def admin_dashboard(request):
-    reunions_stats = {
-        'total': Reunion.objects.count(),
+def api_live_stats(request):
+    from datetime import date as date_type
+    today = timezone.now().date()
+    now = timezone.now()
+    week_num = today.isocalendar()[1]
+    year = today.year
+
+    reunions_today = Reunion.objects.filter(date_debut__date=today).count()
+    reunions_ongoing = Reunion.objects.filter(status='ongoing').count()
+    reunions_planned = Reunion.objects.filter(status='planned').count()
+    participants_today = PresenceRequest.objects.filter(
+        status='confirmed', confirmed_at__date=today
+    ).count()
+    pending_requests = PresenceRequest.objects.filter(status='pending').count()
+    reunions_this_week = Reunion.objects.filter(
+        date_debut__week=week_num, date_debut__year=year
+    ).count()
+    participants_this_week = PresenceRequest.objects.filter(
+        status='confirmed',
+        confirmed_at__week=week_num,
+        confirmed_at__year=year,
+    ).count()
+    reunions_by_status = {
         'planned': Reunion.objects.filter(status='planned').count(),
         'ongoing': Reunion.objects.filter(status='ongoing').count(),
         'finished': Reunion.objects.filter(status='finished').count(),
+        'cancelled': Reunion.objects.filter(status='cancelled').count(),
     }
-    
-    recent_reunions = Reunion.objects.order_by('-created_at')[:5]
-    users_stats = CustomUser.objects.values('role').annotate(count=Count('id'))
-    
+
+    return JsonResponse({
+        'reunions_planned': reunions_planned,
+        'reunions_ongoing': reunions_ongoing,
+        'reunions_today': reunions_today,
+        'participants_today': participants_today,
+        'pending_requests': pending_requests,
+        'reunions_this_week': reunions_this_week,
+        'participants_this_week': participants_this_week,
+        'reunions_by_status': reunions_by_status,
+        'last_updated': now.strftime('%H:%M:%S'),
+    })
+
+
+@login_required
+def admin_dashboard(request):
+    from datetime import date as date_type
+    today = timezone.now().date()
+    week_num = today.isocalendar()[1]
+    year = today.year
+
+    reunions_today = Reunion.objects.filter(date_debut__date=today).count()
+    reunions_this_week = Reunion.objects.filter(
+        date_debut__week=week_num, date_debut__year=year
+    ).count()
+    participants_today = PresenceRequest.objects.filter(
+        status='confirmed', confirmed_at__date=today
+    ).count()
+    participants_this_week = PresenceRequest.objects.filter(
+        status='confirmed',
+        confirmed_at__week=week_num,
+        confirmed_at__year=year,
+    ).count()
+    reunions_by_status = {
+        'planned': Reunion.objects.filter(status='planned').count(),
+        'ongoing': Reunion.objects.filter(status='ongoing').count(),
+        'finished': Reunion.objects.filter(status='finished').count(),
+        'cancelled': Reunion.objects.filter(status='cancelled').count(),
+    }
+    top_organisations = (
+        PresenceRequest.objects.filter(status='confirmed')
+        .exclude(organisation='')
+        .values('organisation')
+        .annotate(n=Count('id'))
+        .order_by('-n')[:5]
+    )
+    prochaines_reunions = Reunion.objects.filter(status='planned').order_by('date_debut')[:5]
+    total_users = CustomUser.objects.count()
+    total_reunions = Reunion.objects.count()
+
     context = {
-        'reunions_stats': reunions_stats,
-        'recent_reunions': recent_reunions,
-        'users_stats': users_stats,
+        'total_users': total_users,
+        'total_reunions': total_reunions,
+        'reunions_today': reunions_today,
+        'reunions_this_week': reunions_this_week,
+        'participants_today': participants_today,
+        'participants_this_week': participants_this_week,
+        'reunions_by_status': reunions_by_status,
+        'top_organisations': top_organisations,
+        'prochaines_reunions': prochaines_reunions,
+        'reunions_ongoing': reunions_by_status['ongoing'],
+        'pending_requests': PresenceRequest.objects.filter(status='pending').count(),
     }
     return render(request, 'reunions/admin_dashboard.html', context)
 
 @login_required
 def secretary_dashboard(request):
-    mes_reunions = Reunion.objects.filter(secretaire=request.user)
+    today = timezone.now().date()
+    user = request.user
+    mes_reunions = Reunion.objects.filter(secretaire=user)
     reunions_sans_cr = mes_reunions.filter(comptes_rendus__isnull=True, status='finished')
-    
+    total_participants = PresenceRequest.objects.filter(
+        reunion__secretaire=user, status='confirmed'
+    ).count()
+    reunions_aujourd_hui = mes_reunions.filter(date_debut__date=today).order_by('date_debut')
+
     context = {
         'mes_reunions': mes_reunions,
         'reunions_sans_cr': reunions_sans_cr,
+        'reunions_sans_cr_count': reunions_sans_cr.count(),
         'total_reunions': mes_reunions.count(),
+        'total_participants': total_participants,
+        'reunions_aujourd_hui': reunions_aujourd_hui,
     }
     return render(request, 'reunions/secretary_dashboard.html', context)
 
@@ -86,6 +172,91 @@ def participant_dashboard(request):
         'total_presences': mes_presences.count(),
     }
     return render(request, 'reunions/participant_dashboard.html', context)
+
+
+@login_required
+def stats_by_department(request):
+    if request.user.role not in ['admin', 'secretary']:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('dashboard')
+
+    date_debut = request.GET.get('date_debut', '')
+    date_fin = request.GET.get('date_fin', '')
+    reunion_id = request.GET.get('reunion_id', '')
+
+    qs = PresenceRequest.objects.filter(status='confirmed')
+    if date_debut:
+        qs = qs.filter(confirmed_at__date__gte=date_debut)
+    if date_fin:
+        qs = qs.filter(confirmed_at__date__lte=date_fin)
+    if reunion_id:
+        try:
+            qs = qs.filter(reunion_id=int(reunion_id))
+        except (ValueError, TypeError):
+            pass
+
+    stats = qs.values('organisation').annotate(total=Count('id')).order_by('-total')
+    total_global = qs.count()
+
+    chart_labels = [s['organisation'] or '(Non renseigné)' for s in stats[:15]]
+    chart_data = [s['total'] for s in stats[:15]]
+
+    reunions = Reunion.objects.order_by('-date_debut')
+
+    context = {
+        'stats': stats,
+        'total_global': total_global,
+        'reunions': reunions,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'reunion_id': reunion_id,
+        'chart_labels_json': json.dumps(chart_labels),
+        'chart_data_json': json.dumps(chart_data),
+    }
+    return render(request, 'reunions/stats_by_department.html', context)
+
+
+@login_required
+def stats_by_department_csv(request):
+    if request.user.role not in ['admin', 'secretary']:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('dashboard')
+
+    import csv
+
+    date_debut = request.GET.get('date_debut', '')
+    date_fin = request.GET.get('date_fin', '')
+    reunion_id = request.GET.get('reunion_id', '')
+
+    qs = PresenceRequest.objects.filter(status='confirmed')
+    if date_debut:
+        qs = qs.filter(confirmed_at__date__gte=date_debut)
+    if date_fin:
+        qs = qs.filter(confirmed_at__date__lte=date_fin)
+    if reunion_id:
+        try:
+            qs = qs.filter(reunion_id=int(reunion_id))
+        except (ValueError, TypeError):
+            pass
+
+    stats = qs.values('organisation').annotate(total=Count('id')).order_by('-total')
+    total_global = qs.count()
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="stats_directions.csv"'
+    response.write('\ufeff')  # BOM pour Excel
+
+    writer = csv.writer(response)
+    writer.writerow(['#', 'Direction / Service', 'Participants', '% du total'])
+    for i, s in enumerate(stats, start=1):
+        org = s['organisation'] or '(Non renseigné)'
+        pct = round(s['total'] / total_global * 100, 1) if total_global else 0
+        writer.writerow([i, org, s['total'], f"{pct}%"])
+    writer.writerow([])
+    writer.writerow(['Total', '', total_global, '100%'])
+
+    return response
+
 
 # Reunion Views
 class ReunionListView(LoginRequiredMixin, ListView):
@@ -109,7 +280,45 @@ class ReunionDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['presences'] = self.object.presence_requests.filter(status='confirmed')
         context['comptes_rendus'] = self.object.comptes_rendus.all()
+        context['agenda_points'] = self.object.agenda_points.all()
+        context['invitations'] = self.object.invitations.all().order_by('-created_at')
+        context['diligences'] = self.object.diligences.prefetch_related('commentaires__auteur').select_related(
+            'responsable_interne', 'created_by'
+        )
         return context
+
+@login_required
+def qr_code_image_view(request, pk):
+    """
+    Génère le QR code PNG à la volée — sans dépendance fichier/media.
+    Fonctionne que DEBUG=True ou False, avec ou sans Nginx.
+    """
+    reunion = get_object_or_404(Reunion, pk=pk)
+
+    site_protocol = getattr(settings, 'SITE_PROTOCOL', 'https://')
+    site_address  = getattr(settings, 'SITE_ADDRESS',  'meeting.artci.ci')
+    site_port     = getattr(settings, 'SITE_PORT', '')
+    base_url = f"{site_protocol}{site_address}:{site_port}" if site_port else f"{site_protocol}{site_address}"
+    qr_url = f"{base_url}/presence/{reunion.qr_code_uuid}/"
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+
+    response = HttpResponse(buf.getvalue(), content_type='image/png')
+    response['Cache-Control'] = 'max-age=3600, private'
+    return response
+
 
 @login_required
 def reunion_create(request):
@@ -589,6 +798,11 @@ def update_reunion_status(request, pk):
     old_status = reunion.status
     reunion.status = new_status
     reunion.save()  # auto_now=True sur updated_at, save() complet requis
+
+    # Notifier les participants si annulation
+    if new_status == 'cancelled' and old_status != 'cancelled':
+        from .tasks import notify_participants_reunion_annulee
+        notify_participants_reunion_annulee.delay(reunion.pk)
 
     return JsonResponse({
         'success': True,
@@ -1083,22 +1297,14 @@ def presence_external_form(request, uuid):
             
             # Envoyer email d'annulation avec délai de 5 minutes
             send_cancellation_email(presence_request)
-            
+
             # Nettoyer la session
             if 'temp_email' in request.session:
                 del request.session['temp_email']
             if 'reunion_uuid' in request.session:
                 del request.session['reunion_uuid']
-            
-            #messages.success(request, 
-            #    "Votre présence a été confirmée ! Un email d'annulation vous a été envoyé "
-            #    "au cas où cette inscription ne serait pas de votre fait.")
-            
-            return render(request, 'reunions/presence_confirmed_external.html', {
-                'reunion': reunion,
-                'presence_request': presence_request,
-                'is_artci': False
-            })
+
+            return redirect('presence_signature', uuid=uuid, token=presence_request.validation_token)
     else:
         # Pré-remplir l'email et le rendre en lecture seule
         form = PresenceDirectForm(initial={'email': temp_email})
@@ -1704,6 +1910,9 @@ def presence_form(request, uuid):
     """
     reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
 
+    # Pré-remplissage depuis invitation_accept
+    prefill_email = request.session.pop('prefill_email', None)
+
     if request.method == 'POST':
         # Récupération sécurisée de l'email
         email = (request.POST.get('email') or '').strip().lower()
@@ -1754,12 +1963,7 @@ def presence_form(request, uuid):
                 logger.info(f"Présence créée pour {email} depuis AD")
                 send_cancellation_email(presence_request)
 
-                return render(request, 'reunions/presence_confirmed_artci.html', {
-                    'reunion': reunion,
-                    'presence_request': presence_request,
-                    'is_artci': True,
-                    'from_ad': True
-                })
+                return redirect('presence_signature', uuid=uuid, token=presence_request.validation_token)
 
             except Exception as e:
                 logger.error(f"Erreur connexion AD pour {email}: {str(e)}")
@@ -1774,7 +1978,12 @@ def presence_form(request, uuid):
             request.session['reunion_uuid'] = str(uuid)
             return redirect('presence_external_form', uuid=uuid)
 
-    # GET → redirige vers la page QR / consentement
+    # GET → redirige vers la page QR / consentement (ou pré-rempli depuis invitation)
+    if prefill_email:
+        return render(request, 'reunions/presence_consent.html', {
+            'reunion': reunion,
+            'prefill_email': prefill_email,
+        })
     return redirect('presence_qr_redirect', uuid=uuid)
 
 
@@ -1838,12 +2047,7 @@ def presence_artci_fallback_form(request, uuid):
             request.session.pop('artci_fallback_email', None)
             request.session.pop('reunion_uuid', None)
 
-            return render(request, 'reunions/presence_confirmed_artci.html', {
-                'reunion': reunion,
-                'presence_request': presence_request,
-                'is_artci': True,
-                'from_ad': False,
-            })
+            return redirect('presence_signature', uuid=uuid, token=presence_request.validation_token)
     else:
         form = PresenceARTCIFallbackForm(initial={
             'email': artci_email,
@@ -1857,3 +2061,611 @@ def presence_artci_fallback_form(request, uuid):
         'reunion': reunion,
         'email': artci_email,
     })
+
+
+# ─── Agenda Views ─────────────────────────────────────────────────────────────
+
+def _can_manage_reunion(user, reunion):
+    return (
+        user.role == 'admin'
+        or reunion.organisateur == user
+        or reunion.secretaire == user
+    )
+
+
+@login_required
+def agenda_point_create(request, reunion_id):
+    reunion = get_object_or_404(Reunion, pk=reunion_id)
+    if not _can_manage_reunion(request.user, reunion):
+        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
+        return redirect('reunion_detail', pk=reunion_id)
+
+    if request.method == 'POST':
+        form = AgendaPointForm(request.POST)
+        if form.is_valid():
+            point = form.save(commit=False)
+            point.reunion = reunion
+            point.save()
+            messages.success(request, "Point d'agenda ajouté avec succès.")
+            return redirect('reunion_detail', pk=reunion_id)
+    else:
+        # Pré-remplir l'ordre avec le suivant disponible
+        next_ordre = (reunion.agenda_points.count() or 0) + 1
+        form = AgendaPointForm(initial={'ordre': next_ordre})
+
+    return render(request, 'reunions/agenda_point_form.html', {
+        'form': form,
+        'reunion': reunion,
+        'action': 'Ajouter',
+    })
+
+
+@login_required
+def agenda_point_update(request, pk):
+    point = get_object_or_404(AgendaPoint, pk=pk)
+    reunion = point.reunion
+    if not _can_manage_reunion(request.user, reunion):
+        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
+        return redirect('reunion_detail', pk=reunion.pk)
+
+    if request.method == 'POST':
+        form = AgendaPointForm(request.POST, instance=point)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Point d'agenda mis à jour.")
+            return redirect('reunion_detail', pk=reunion.pk)
+    else:
+        form = AgendaPointForm(instance=point)
+
+    return render(request, 'reunions/agenda_point_form.html', {
+        'form': form,
+        'reunion': reunion,
+        'point': point,
+        'action': 'Modifier',
+    })
+
+
+@login_required
+def agenda_point_delete(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    point = get_object_or_404(AgendaPoint, pk=pk)
+    if not _can_manage_reunion(request.user, point.reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+    point.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+def agenda_point_toggle(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    point = get_object_or_404(AgendaPoint, pk=pk)
+    if not _can_manage_reunion(request.user, point.reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+    point.est_traite = not point.est_traite
+    point.save(update_fields=['est_traite'])
+    total = point.reunion.agenda_points.count()
+    traites = point.reunion.agenda_points.filter(est_traite=True).count()
+    return JsonResponse({
+        'success': True,
+        'est_traite': point.est_traite,
+        'traites': traites,
+        'total': total,
+    })
+
+
+@login_required
+def agenda_point_reorder(request, reunion_id):
+    """AJAX : réorganise les points d'agenda par drag-and-drop."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    reunion = get_object_or_404(Reunion, pk=reunion_id)
+    if not _can_manage_reunion(request.user, reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+    try:
+        items = json.loads(request.body)  # [{'id': pk, 'ordre': new_ordre}, ...]
+        for item in items:
+            AgendaPoint.objects.filter(pk=item['id'], reunion=reunion).update(ordre=item['ordre'])
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+def agenda_point_notes(request, pk):
+    """AJAX : sauvegarde les notes de séance d'un point d'agenda."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    point = get_object_or_404(AgendaPoint, pk=pk)
+    if not _can_manage_reunion(request.user, point.reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+    try:
+        data = json.loads(request.body)
+        point.notes_seance = data.get('notes', '')
+        point.save(update_fields=['notes_seance'])
+        return JsonResponse({'success': True, 'notes': point.notes_seance})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+# ─── Signature numérique ───────────────────────────────────────────────────────
+
+def presence_signature(request, uuid, token):
+    """Page de capture de signature numérique après enregistrement de présence."""
+    reunion = get_object_or_404(Reunion, qr_code_uuid=uuid)
+    presence_request = get_object_or_404(PresenceRequest, validation_token=token, reunion=reunion)
+
+    if request.method == 'POST':
+        import base64 as _base64
+        from django.core.files.base import ContentFile
+
+        signature_data = request.POST.get('signature_data', '').strip()
+        if signature_data and 'base64,' in signature_data:
+            _, img_b64 = signature_data.split('base64,', 1)
+            try:
+                img_bytes = _base64.b64decode(img_b64)
+                fname = f"sig_{presence_request.validation_token}.png"
+                presence_request.signature.save(fname, ContentFile(img_bytes), save=True)
+            except Exception as e:
+                logger.warning(f"Erreur sauvegarde signature: {e}")
+
+        if presence_request.is_artci_email():
+            return render(request, 'reunions/presence_confirmed_artci.html', {
+                'reunion': reunion,
+                'presence_request': presence_request,
+                'is_artci': True,
+                'from_ad': False,
+            })
+        return render(request, 'reunions/presence_confirmed_external.html', {
+            'reunion': reunion,
+            'presence_request': presence_request,
+            'is_artci': False,
+        })
+
+    return render(request, 'reunions/presence_signature.html', {
+        'reunion': reunion,
+        'presence_request': presence_request,
+    })
+
+
+# ─── Invitation Views ──────────────────────────────────────────────────────────
+
+def _build_site_url(request=None):
+    """Construit l'URL de base du site."""
+    from django.conf import settings
+    if request:
+        return f"{request.scheme}://{request.get_host()}"
+    protocol = getattr(settings, 'SITE_PROTOCOL', 'https://')
+    address = getattr(settings, 'SITE_ADDRESS', 'meeting.artci.ci')
+    port = getattr(settings, 'SITE_PORT', '')
+    if port:
+        return f"{protocol}{address}:{port}"
+    return f"{protocol}{address}"
+
+
+def send_invitation_email(invitation, request=None):
+    """Envoie l'email d'invitation à un participant."""
+    from django.urls import reverse
+    base_url = _build_site_url(request)
+    accept_url = base_url + reverse('invitation_accept', args=[str(invitation.token)])
+    decline_url = base_url + reverse('invitation_decline', args=[str(invitation.token)])
+
+    subject = f"Invitation — {invitation.reunion.titre}"
+    context = {
+        'invitation': invitation,
+        'reunion': invitation.reunion,
+        'accept_url': accept_url,
+        'decline_url': decline_url,
+    }
+    try:
+        html_content = render_to_string('reunions/email_invitation.html', context)
+    except Exception:
+        html_content = None
+
+    text_content = (
+        f"Bonjour,\n\n"
+        f"Vous êtes invité(e) à participer à la réunion « {invitation.reunion.titre} »\n"
+        f"Date : {invitation.reunion.date_debut.strftime('%d/%m/%Y à %H:%M')}\n"
+        f"Lieu : {invitation.reunion.lieu}\n\n"
+        f"Accepter : {accept_url}\n"
+        f"Décliner : {decline_url}\n\n"
+        f"Cordialement,\nL'équipe QR Meeting\n"
+    )
+
+    try:
+        email_msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[invitation.email],
+        )
+        if html_content:
+            email_msg.attach_alternative(html_content, "text/html")
+        email_msg.send()
+        return True
+    except Exception as e:
+        logger.error(f"Erreur envoi invitation {invitation.email}: {e}")
+        return False
+
+
+@login_required
+def invitation_send(request, reunion_id):
+    reunion = get_object_or_404(Reunion, pk=reunion_id)
+    if not _can_manage_reunion(request.user, reunion):
+        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
+        return redirect('reunion_detail', pk=reunion_id)
+
+    if request.method == 'POST':
+        form = InvitationBulkForm(request.POST)
+        if form.is_valid():
+            emails = form.cleaned_data['emails']
+            sent = 0
+            already_invited = 0
+            errors = 0
+
+            for email_addr in emails:
+                invitation, created = Invitation.objects.get_or_create(
+                    reunion=reunion,
+                    email=email_addr,
+                    defaults={'invited_by': request.user},
+                )
+                if not created and invitation.status in ('sent', 'accepted'):
+                    already_invited += 1
+                    continue
+
+                success = send_invitation_email(invitation, request)
+                if success:
+                    invitation.status = 'sent'
+                    invitation.sent_at = timezone.now()
+                    invitation.invited_by = request.user
+                    invitation.save(update_fields=['status', 'sent_at', 'invited_by'])
+                    sent += 1
+                else:
+                    errors += 1
+
+            parts = []
+            if sent:
+                parts.append(f"{sent} invitation(s) envoyée(s)")
+            if already_invited:
+                parts.append(f"{already_invited} déjà invité(s)")
+            if errors:
+                parts.append(f"{errors} erreur(s)")
+            messages.success(request, " — ".join(parts) if parts else "Aucune action effectuée.")
+            return redirect('reunion_detail', pk=reunion_id)
+    else:
+        form = InvitationBulkForm()
+
+    return render(request, 'reunions/invitation_form.html', {
+        'form': form,
+        'reunion': reunion,
+    })
+
+
+def invitation_accept(request, token):
+    invitation = get_object_or_404(Invitation, token=token)
+    reunion = invitation.reunion
+
+    if reunion.status in ('cancelled', 'finished'):
+        messages.error(request, "Cette réunion n'est plus accessible.")
+        return redirect('dashboard')
+
+    invitation.status = 'accepted'
+    invitation.save(update_fields=['status'])
+
+    # Pré-remplir l'email en session pour le formulaire de présence
+    request.session['prefill_email'] = invitation.email
+    request.session['reunion_uuid'] = str(reunion.qr_code_uuid)
+    messages.success(request, "Invitation acceptée ! Veuillez compléter votre inscription.")
+    return redirect('presence_form', uuid=reunion.qr_code_uuid)
+
+
+def invitation_decline(request, token):
+    invitation = get_object_or_404(Invitation, token=token)
+    invitation.status = 'declined'
+    invitation.save(update_fields=['status'])
+    return render(request, 'reunions/invitation_declined.html', {
+        'invitation': invitation,
+        'reunion': invitation.reunion,
+    })
+
+
+# ─── Diligences ───────────────────────────────────────────────────────────────
+
+@login_required
+def diligence_create(request, reunion_id):
+    reunion = get_object_or_404(Reunion, pk=reunion_id)
+    if not _can_manage_reunion(request.user, reunion):
+        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
+        return redirect('reunion_detail', pk=reunion_id)
+
+    if request.method == 'POST':
+        form = DiligenceForm(request.POST)
+        if form.is_valid():
+            diligence = form.save(commit=False)
+            diligence.reunion = reunion
+            diligence.created_by = request.user
+            diligence.save()
+            messages.success(request, "Diligence ajoutée avec succès.")
+            return redirect('reunion_detail', pk=reunion_id)
+    else:
+        form = DiligenceForm()
+
+    return render(request, 'reunions/diligence_form.html', {
+        'form': form,
+        'reunion': reunion,
+        'action': 'Ajouter',
+    })
+
+
+@login_required
+def diligence_update(request, pk):
+    diligence = get_object_or_404(Diligence, pk=pk)
+    reunion = diligence.reunion
+    if not _can_manage_reunion(request.user, reunion):
+        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
+        return redirect('reunion_detail', pk=reunion.pk)
+
+    if request.method == 'POST':
+        form = DiligenceForm(request.POST, instance=diligence)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Diligence mise à jour.")
+            return redirect('reunion_detail', pk=reunion.pk)
+    else:
+        form = DiligenceForm(instance=diligence)
+
+    return render(request, 'reunions/diligence_form.html', {
+        'form': form,
+        'reunion': reunion,
+        'diligence': diligence,
+        'action': 'Modifier',
+    })
+
+
+@login_required
+def diligence_delete(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    diligence = get_object_or_404(Diligence, pk=pk)
+    if not _can_manage_reunion(request.user, diligence.reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+    diligence.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+def diligence_update_status(request, pk):
+    """Change le statut d'une diligence et enregistre un commentaire optionnel."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+    diligence = get_object_or_404(Diligence, pk=pk)
+    if not _can_manage_reunion(request.user, diligence.reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Données invalides'}, status=400)
+
+    nouveau_status = data.get('status', '').strip()
+    contenu = data.get('commentaire', '').strip()
+
+    valid_statuses = [s[0] for s in Diligence.STATUS]
+    if nouveau_status not in valid_statuses:
+        return JsonResponse({'success': False, 'error': 'Statut invalide'}, status=400)
+
+    ancien_status = diligence.status
+    diligence.status = nouveau_status
+    diligence.save(update_fields=['status', 'updated_at'])
+
+    # Enregistrer le changement (et commentaire éventuel) dans l'historique
+    DiligenceComment.objects.create(
+        diligence=diligence,
+        auteur=request.user,
+        contenu=contenu,
+        ancien_status=ancien_status,
+        nouveau_status=nouveau_status,
+    )
+
+    total = diligence.reunion.diligences.count()
+    terminees = diligence.reunion.diligences.filter(status='completed').count()
+
+    return JsonResponse({
+        'success': True,
+        'status': nouveau_status,
+        'status_display': diligence.get_status_display(),
+        'terminees': terminees,
+        'total': total,
+    })
+
+
+@login_required
+def diligence_add_comment(request, pk):
+    """Ajoute un commentaire libre sur une diligence (sans changer le statut)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+    diligence = get_object_or_404(Diligence, pk=pk)
+    if not _can_manage_reunion(request.user, diligence.reunion):
+        return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Données invalides'}, status=400)
+
+    contenu = data.get('commentaire', '').strip()
+    if not contenu:
+        return JsonResponse({'success': False, 'error': 'Le commentaire est vide'}, status=400)
+
+    comment = DiligenceComment.objects.create(
+        diligence=diligence,
+        auteur=request.user,
+        contenu=contenu,
+    )
+
+    auteur_display = (
+        f"{comment.auteur.first_name} {comment.auteur.last_name}".strip()
+        if comment.auteur else "Inconnu"
+    )
+
+    return JsonResponse({
+        'success': True,
+        'commentaire': {
+            'auteur': auteur_display,
+            'contenu': contenu,
+            'date': comment.created_at.strftime('%d/%m/%Y %H:%M'),
+        }
+    })
+
+
+# ─── Tableau de bord personnel "Mes Diligences" ───────────────────────────────
+
+@login_required
+def mes_diligences(request):
+    """Toutes les diligences assignées à l'utilisateur connecté, toutes réunions confondues."""
+    from django.utils import timezone
+
+    qs = Diligence.objects.filter(
+        responsable_interne=request.user
+    ).select_related('reunion', 'created_by').prefetch_related('commentaires')
+
+    # Filtres
+    status_filtre = request.GET.get('status', '')
+    if status_filtre:
+        qs = qs.filter(status=status_filtre)
+
+    today = timezone.now().date()
+
+    # Statistiques résumé
+    total          = Diligence.objects.filter(responsable_interne=request.user).count()
+    en_retard      = Diligence.objects.filter(
+        responsable_interne=request.user,
+        echeance__lt=today,
+        status__in=['open', 'in_progress'],
+    ).count()
+    en_cours       = Diligence.objects.filter(responsable_interne=request.user, status='in_progress').count()
+    terminees      = Diligence.objects.filter(responsable_interne=request.user, status='completed').count()
+    a_faire        = Diligence.objects.filter(responsable_interne=request.user, status='open').count()
+
+    # Tri : urgentes et en retard en premier
+    diligences = qs.order_by(
+        'status',          # open < in_progress avant completed/cancelled
+        'echeance',
+        '-priorite',
+    )
+
+    return render(request, 'reunions/mes_diligences.html', {
+        'diligences': diligences,
+        'status_filtre': status_filtre,
+        'status_choices': Diligence.STATUS,
+        'today': today,
+        'stats': {
+            'total': total,
+            'en_retard': en_retard,
+            'en_cours': en_cours,
+            'terminees': terminees,
+            'a_faire': a_faire,
+        },
+    })
+
+
+# ─── Taux de réalisation des diligences par direction ─────────────────────────
+
+@login_required
+def stats_diligences_directions(request):
+    """Statistiques de réalisation des diligences groupées par direction/service."""
+    if request.user.role not in ['admin', 'secretary']:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('dashboard')
+
+    from django.utils import timezone
+    from django.db.models import Case, When, IntegerField, FloatField
+
+    today = timezone.now().date()
+
+    # Filtres
+    date_debut = request.GET.get('date_debut', '')
+    date_fin   = request.GET.get('date_fin', '')
+
+    qs = Diligence.objects.filter(
+        responsable_interne__isnull=False
+    ).select_related('responsable_interne')
+
+    if date_debut:
+        qs = qs.filter(created_at__date__gte=date_debut)
+    if date_fin:
+        qs = qs.filter(created_at__date__lte=date_fin)
+
+    # Grouper par direction
+    from django.db.models import Count, Q as DQ
+    stats_raw = (
+        qs.values('responsable_interne__direction')
+        .annotate(
+            total=Count('id'),
+            terminees=Count('id', filter=DQ(status='completed')),
+            en_cours=Count('id', filter=DQ(status='in_progress')),
+            a_faire=Count('id', filter=DQ(status='open')),
+            en_retard=Count('id', filter=DQ(
+                status__in=['open', 'in_progress'],
+                echeance__lt=today,
+            )),
+        )
+        .order_by('-total')
+    )
+
+    # Calcul du taux de réalisation
+    stats = []
+    for s in stats_raw:
+        direction = s['responsable_interne__direction'] or '(Direction non renseignée)'
+        taux = round(s['terminees'] / s['total'] * 100) if s['total'] else 0
+        stats.append({
+            'direction': direction,
+            'total': s['total'],
+            'terminees': s['terminees'],
+            'en_cours': s['en_cours'],
+            'a_faire': s['a_faire'],
+            'en_retard': s['en_retard'],
+            'taux': taux,
+        })
+
+    # Données pour Chart.js
+    chart_labels = [s['direction'] for s in stats[:12]]
+    chart_terminees = [s['terminees'] for s in stats[:12]]
+    chart_en_cours  = [s['en_cours']  for s in stats[:12]]
+    chart_a_faire   = [s['a_faire']   for s in stats[:12]]
+
+    return render(request, 'reunions/stats_diligences_directions.html', {
+        'stats': stats,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'chart_labels_json':    json.dumps(chart_labels),
+        'chart_terminees_json': json.dumps(chart_terminees),
+        'chart_en_cours_json':  json.dumps(chart_en_cours),
+        'chart_a_faire_json':   json.dumps(chart_a_faire),
+    })
+
+
+@login_required
+def export_diligences_view(request, reunion_id):
+    """Export des diligences d'une réunion en PDF ou Excel."""
+    reunion = get_object_or_404(Reunion, pk=reunion_id)
+
+    # Vérification des permissions
+    is_authorized = (
+        request.user.role in ['admin', 'secretary']
+        or reunion.organisateur == request.user
+        or reunion.secretaire == request.user
+    )
+    if not is_authorized:
+        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
+        return redirect('reunion_detail', pk=reunion_id)
+
+    format_type = request.GET.get('format', 'pdf')
+    if format_type not in ('pdf', 'excel'):
+        format_type = 'pdf'
+
+    from .utils import export_diligences
+    return export_diligences(reunion, format_type)

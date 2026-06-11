@@ -168,12 +168,12 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 # MEDIA_ROOT = BASE_DIR / 'media'
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
-# MEDIA_ROOT = "/app/media"
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", str(BASE_DIR / 'media'))
+# Docker: docker-compose.yml doit monter /app/media comme volume
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.environ.get("STATIC_ROOT", str(BASE_DIR / 'staticfiles'))
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
@@ -394,6 +394,18 @@ CELERY_BEAT_SCHEDULE = {
     'cleanup-expired-requests': {
         'task': 'reunions.tasks.cleanup_expired_requests',
         'schedule': crontab(hour=2, minute=0),  # Tous les jours à 2h du matin
+    },
+    'send-j-minus-1-reminders': {
+        'task': 'reunions.tasks.send_reminder_j_minus_1',
+        'schedule': crontab(hour='*', minute=0),  # Toutes les heures
+    },
+    'send-weekly-summary': {
+        'task': 'reunions.tasks.send_weekly_summary',
+        'schedule': crontab(day_of_week=1, hour=8, minute=0),  # Lundi 8h UTC
+    },
+    'send-diligence-reminders': {
+        'task': 'reunions.tasks.send_diligence_reminders',
+        'schedule': crontab(hour=7, minute=0),  # Tous les jours à 7h
     },
 }
 

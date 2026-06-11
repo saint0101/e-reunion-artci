@@ -1,0 +1,38 @@
+{
+  "name": "eRéunion ARTCI",
+  "short_name": "eRéunion",
+  "description": "Gestion des réunions et présences — ARTCI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F9FA",
+  "theme_color": "#FF6B35",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "{{ request.scheme }}://{{ request.get_host }}/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "{{ request.scheme }}://{{ request.get_host }}/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mes diligences",
+      "url": "/mes-diligences/",
+      "description": "Voir mes actions en cours"
+    },
+    {
+      "name": "Mes réunions",
+      "url": "/reunions/",
+      "description": "Liste des réunions"
+    }
+  ],
+  "categories": ["productivity", "business"]
+}
