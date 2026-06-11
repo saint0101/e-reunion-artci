@@ -17,6 +17,7 @@ class CustomUser(AbstractUser):
     )
     role = models.CharField(max_length=20, choices=ROLES, default='participant')
     phone = models.CharField(max_length=15, blank=True)
+    direction = models.CharField(max_length=200, blank=True, default='')
     must_change_password = models.BooleanField(default=False, help_text="Force le changement de mot de passe à la prochaine connexion")
     
     # Résoudre les conflits de reverse accessor
@@ -300,12 +301,13 @@ class PresenceRequest(models.Model):
     fonction = models.CharField(max_length=200, blank=True)  # NOUVEAU
     contact = models.CharField(max_length=20, blank=True)   # NOUVEAU
     validation_token = models.UUIDField(default=uuid.uuid4, unique=True)
-    cancellation_token = models.UUIDField(default=uuid.uuid4, unique=True)  # NOUVEAU
+    cancellation_token = models.UUIDField(default=uuid.uuid4, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     consent_given = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
-    auto_confirm_at = models.DateTimeField(null=True, blank=True)  # NOUVEAU: Heure de confirmation automatique
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    auto_confirm_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         unique_together = ('reunion', 'email')
@@ -352,6 +354,32 @@ class PresenceRequest(models.Model):
             self.save()
             return True
         return False
+
+    def cancel_presence(self):
+        """Annule la présence et enregistre l'horodatage"""
+        from django.utils import timezone as tz
+        self.status = 'cancelled'
+        self.cancelled_at = tz.now()
+        self.save()
+
+    def get_display_name(self):
+        """Retourne le nom d'affichage du participant"""
+        if self.prenom and self.nom:
+            return f"{self.prenom} {self.nom}"
+        elif self.prenom:
+            return self.prenom
+        elif self.nom:
+            return self.nom
+        else:
+            email_prefix = self.email.split('@')[0]
+            if '.' in email_prefix:
+                parts = email_prefix.split('.')
+                return f"{parts[0].capitalize()} {parts[1].capitalize() if len(parts) > 1 else ''}".strip()
+            return email_prefix.capitalize()
+
+    def get_validation_type(self):
+        """Retourne le type de validation (ARTCI ou Externe)"""
+        return "ARTCI" if self.is_artci_email() else "Externe"
 
 
 class CancellationLog(models.Model):

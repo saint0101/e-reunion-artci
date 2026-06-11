@@ -4,8 +4,10 @@ from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
-    # Authentication
-    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    # Authentication (2FA)
+    path('login/', views.login_view, name='login'),
+    path('otp/verify/', views.otp_verify_view, name='otp_verify'),
+    path('otp/resend/', views.otp_resend_view, name='otp_resend'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register, name='register'),
 
@@ -37,6 +39,12 @@ urlpatterns = [
              template_name='registration/password_reset_complete.html',
          ),
          name='password_reset_complete'),
+
+    # Sauvegardes (admin)
+    path('backups/', views.backup_list_view, name='backup_list'),
+    path('backups/create/', views.backup_create_view, name='backup_create_view'),
+    path('backups/download/<str:filename>/', views.backup_download, name='backup_download'),
+    path('backups/delete/<str:filename>/', views.backup_delete, name='backup_delete'),
 
     # User Management
     path('profile/', views.profile, name='profile'),

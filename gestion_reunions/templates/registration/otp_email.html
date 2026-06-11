@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+  .container { max-width: 520px; margin: 40px auto; background: #fff; border-radius: 8px;
+               box-shadow: 0 2px 8px rgba(0,0,0,.1); overflow: hidden; }
+  .header { background: #FF6B35; padding: 28px 32px; }
+  .header h1 { color: #fff; margin: 0; font-size: 1.3rem; }
+  .body { padding: 32px; }
+  .otp-box { text-align: center; background: #fff8f5; border: 2px dashed #FF6B35;
+             border-radius: 8px; padding: 24px; margin: 24px 0; }
+  .otp-code { font-size: 2.5rem; font-weight: 700; letter-spacing: 0.6rem;
+              color: #FF6B35; font-family: monospace; }
+  .footer { background: #f8f9fa; padding: 16px 32px; font-size: 0.8rem; color: #888; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📋 QR Meeting — Vérification en deux étapes</h1>
+  </div>
+  <div class="body">
+    <p>Bonjour <strong>{{ user.first_name|default:user.username }}</strong>,</p>
+    <p>Voici votre code de vérification unique pour accéder à QR Meeting :</p>
+
+    <div class="otp-box">
+      <div class="otp-code">{{ otp_code }}</div>
+      <p style="margin:8px 0 0;color:#666;font-size:.85rem;">Valable <strong>{{ expiry_min }} minutes</strong></p>
+    </div>
+
+    <p>Si vous n'êtes pas à l'origine de cette demande de connexion, ignorez ce message
+    et changez votre mot de passe immédiatement.</p>
+    <p style="color:#888;font-size:.85rem;">Ce code est à usage unique et ne doit jamais être partagé.</p>
+  </div>
+  <div class="footer">
+    &copy; ARTCI — Plateforme QR Meeting
+  </div>
+</div>
+</body>
+</html>

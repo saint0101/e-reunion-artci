@@ -33,6 +33,14 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 
+# URL secrète de l'interface d'administration Django
+# Changer via la variable d'environnement ADMIN_URL dans .env / docker-compose
+ADMIN_URL = os.environ.get('ADMIN_URL', 'artci-qrmeeting-admin-2025/')
+
+# 2FA OTP
+OTP_EXPIRY_SECONDS = 600     # 10 minutes
+OTP_MAX_ATTEMPTS   = 5       # Tentatives avant invalidation
+
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', "meeting.artci.ci", "www.meeting.artci.ci"]
 
 
@@ -252,8 +260,10 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 # ✅ LOGGING CONFIGURATION AMÉLIORÉE
 LOG_DIR = BASE_DIR / 'logs'
-if not LOG_DIR.exists():
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+CANCELLATION_LOG_DIR = BASE_DIR / 'reunions' / 'logs'
+CANCELLATION_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configuration pour les notifications
 SECRETARY_NOTIFICATION_EMAIL = os.environ.get('SECRETARY_NOTIFICATION_EMAIL', 'qrmeeting@artci.ci')
@@ -389,13 +399,20 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     'auto-confirm-presences': {
         'task': 'reunions.tasks.auto_confirm_pending_presences',
-        'schedule': 60.0,  # Toutes les minutes
+        'schedule': 60.0,
     },
     'cleanup-expired-requests': {
         'task': 'reunions.tasks.cleanup_expired_requests',
-        'schedule': crontab(hour=2, minute=0),  # Tous les jours à 2h du matin
+        'schedule': crontab(hour=2, minute=0),
+    },
+    'backup-database-daily': {
+        'task': 'reunions.tasks.backup_database',
+        'schedule': crontab(hour=2, minute=30),  # Tous les jours à 02h30
     },
 }
+
+# ── Sauvegarde ────────────────────────────────────────────────────────────────
+BACKUP_ROOT = os.environ.get('BACKUP_ROOT', str(BASE_DIR / 'db_backup'))
 
 CELERY_TIMEZONE = 'UTC'
 # Session Configuration

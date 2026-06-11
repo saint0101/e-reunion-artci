@@ -183,58 +183,70 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 const STATUS_CONFIG = {
-    planned:   { label: 'Planifiée',  btnCls: 'btn-warning',  textCls: 'bg-warning text-dark' },
-    ongoing:   { label: 'En cours',   btnCls: 'btn-success',  textCls: 'bg-success' },
-    finished:  { label: 'Terminée',   btnCls: 'btn-info',     textCls: 'bg-info' },
-    cancelled: { label: 'Annulée',    btnCls: 'btn-danger',   textCls: 'bg-danger' },
+    planned:   { label: 'Planifiée', btnCls: 'btn-warning',  icon: 'fa-clock' },
+    ongoing:   { label: 'En cours',  btnCls: 'btn-success',  icon: 'fa-play' },
+    finished:  { label: 'Terminée',  btnCls: 'btn-info',     icon: 'fa-check' },
+    cancelled: { label: 'Annulée',   btnCls: 'btn-danger',   icon: 'fa-ban' },
 };
+
+const CSRF_TOKEN = '{{ csrf_token }}';
 
 const toastEl  = document.getElementById('statusToast');
 const toastMsg = document.getElementById('toastMessage');
-const toast    = new bootstrap.Toast(toastEl, { delay: 3000 });
 
 function showToast(message, ok) {
+    const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 });
     toastEl.className = 'toast align-items-center border-0 text-white ' + (ok ? 'bg-success' : 'bg-danger');
     toastMsg.textContent = message;
     toast.show();
 }
 
-document.querySelectorAll('.status-link').forEach(link => {
-    link.addEventListener('click', function (e) {
-        e.preventDefault();
-        const pk        = this.dataset.pk;
-        const newStatus = this.dataset.status;
-        const row       = this.closest('tr');
-        const dropBtn   = row.querySelector('.dropdown-toggle');
+/* Délégation d'événement : fonctionne même si les lignes sont chargées dynamiquement */
+document.addEventListener('click', function (e) {
+    const link = e.target.closest('.status-link');
+    if (!link) return;
+    e.preventDefault();
 
-        fetch(`/api/reunion/${pk}/status/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
-            body: 'status=' + newStatus,
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                const cfg = STATUS_CONFIG[data.new_status];
-                // Mettre à jour le bouton dropdown
-                dropBtn.className = `btn btn-sm dropdown-toggle border-0 ${cfg.btnCls}`;
-                dropBtn.textContent = cfg.label;
-                // Marquer l'item actif
-                row.querySelectorAll('.status-link').forEach(l => {
-                    l.classList.toggle('active', l.dataset.status === data.new_status);
-                });
-                showToast('Statut mis à jour : ' + cfg.label, true);
-            } else {
-                showToast(data.error || 'Erreur lors de la mise à jour.', false);
-            }
-        })
-        .catch(() => showToast('Erreur réseau. Veuillez réessayer.', false));
+    const pk        = link.dataset.pk;
+    const newStatus = link.dataset.status;
+    const row       = link.closest('tr');
+    const dropBtn   = row.querySelector('.dropdown-toggle');
+
+    /* Désactiver temporairement pour éviter les double-clics */
+    row.querySelectorAll('.status-link').forEach(l => l.style.pointerEvents = 'none');
+
+    fetch(`/api/reunion/${pk}/status/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: 'status=' + encodeURIComponent(newStatus),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const cfg = STATUS_CONFIG[data.new_status];
+            /* Mettre à jour la couleur et le label du bouton */
+            dropBtn.className = `btn btn-sm dropdown-toggle border-0 ${cfg.btnCls}`;
+            dropBtn.innerHTML = `<i class="fas ${cfg.icon} me-1"></i>${cfg.label}`;
+            /* Cocher le bon item dans le menu */
+            row.querySelectorAll('.status-link').forEach(l => {
+                l.classList.toggle('active', l.dataset.status === data.new_status);
+            });
+            showToast('Statut mis à jour : ' + cfg.label, true);
+        } else {
+            showToast(data.error || 'Erreur lors de la mise à jour.', false);
+        }
+    })
+    .catch(() => showToast('Erreur réseau. Veuillez réessayer.', false))
+    .finally(() => {
+        row.querySelectorAll('.status-link').forEach(l => l.style.pointerEvents = '');
     });
 });
 </script>

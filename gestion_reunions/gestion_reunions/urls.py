@@ -21,8 +21,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+# L'URL de l'admin est définie dans settings.ADMIN_URL (variable d'environnement)
+# Par défaut : artci-qrmeeting-admin-2025/
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path('', include('reunions.urls')),
     path('accounts/', include('accounts.urls')),
 ]

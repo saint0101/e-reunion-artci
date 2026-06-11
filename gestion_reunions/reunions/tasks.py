@@ -43,6 +43,25 @@ def auto_confirm_pending_presences():
     return confirmed_count
 
 @shared_task
+def backup_database():
+    """
+    Sauvegarde automatique quotidienne de la base et des médias.
+    Programmée à 02h00 via CELERY_BEAT_SCHEDULE dans settings.py.
+    """
+    from django.core.management import call_command
+    from io import StringIO
+
+    out = StringIO()
+    try:
+        call_command('backup_create', keep=7, stdout=out)
+        logger.info(f'Sauvegarde automatique réussie :\n{out.getvalue()}')
+        return True
+    except Exception as exc:
+        logger.error(f'Échec de la sauvegarde automatique : {exc}')
+        return False
+
+
+@shared_task
 def cleanup_expired_requests():
     """
     Tâche Celery pour nettoyer les anciennes demandes expirées

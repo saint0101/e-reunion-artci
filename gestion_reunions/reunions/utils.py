@@ -15,21 +15,77 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import io
+import unicodedata
 from datetime import datetime
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Classement protocolaire des participants
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _normalize(text):
+    """Minuscule + supprime les accents pour une comparaison souple."""
+    text = (text or '').lower()
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )
+
+
+def get_presence_rank(presence):
+    """
+    Retourne une clé de tri (priorité, nom) pour le classement protocolaire.
+
+    Priorités :
+      0 → Président du Conseil de Régulation
+      1 → Autres Membres du Conseil de Régulation
+      2 → Directeur Général
+      3 → Tous les autres participants
+    """
+    f = _normalize(presence.fonction)
+    o = _normalize(presence.organisation)
+    combined = f + ' ' + o
+
+    # Président du Conseil (doit être vérifié avant "Membre")
+    if 'president' in combined and 'conseil' in combined:
+        return (0, _normalize(presence.nom))
+
+    # Membres du Conseil de Régulation
+    if 'conseil de regulation' in combined or ('membre' in combined and 'conseil' in combined):
+        return (1, _normalize(presence.nom))
+
+    # Directeur Général
+    if 'directeur general' in combined or 'direction generale' in combined:
+        return (2, _normalize(presence.nom))
+
+    # Tous les autres
+    return (3, _normalize(presence.nom))
+
+
+def sort_presences_by_rank(presences):
+    """
+    Trie les participants selon la logique de préséance protocolaire ARTCI.
+    Accepte un queryset Django ou une liste de PresenceRequest.
+    """
+    return sorted(presences, key=get_presence_rank)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 def generate_presence_report(reunion, format_type='pdf'):
     """Génère un rapport de présence dans le format spécifié"""
-    
-    presences = reunion.presence_requests.filter(status='confirmed')
-    
+
+    presences = sort_presences_by_rank(
+        list(reunion.presence_requests.filter(status='confirmed'))
+    )
+
     if format_type == 'pdf':
         return generate_pdf_report(reunion, presences)
     elif format_type == 'excel':
         return generate_excel_report(reunion, presences)
     elif format_type == 'word':
         return generate_word_report(reunion, presences)
-    
+
     return None
 
 
@@ -68,7 +124,7 @@ def generate_pdf_report(reunion, presences):
         ['Date :', reunion.date_debut.strftime('%d/%m/%Y à %H:%M')],
         ['Lieu :', reunion.lieu],
         ['Organisateur :', f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"],
-        ['Nombre de participants :', str(presences.count())],
+        ['Nombre de participants :', str(len(presences))],
     ]
     info_table = Table(info_data, colWidths=[2 * inch, 4 * inch])
     info_table.setStyle(TableStyle([
@@ -236,7 +292,7 @@ def generate_excel_report(reunion, presences):
     ws['A5'] = "Organisateur:"
     ws['B5'] = f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"
     ws['A6'] = "Nombre de participants:"
-    ws['B6'] = presences.count()
+    ws['B6'] = len(presences)
     
     # Mettre en gras les labels
     for row in range(3, 7):
@@ -266,7 +322,7 @@ def generate_excel_report(reunion, presences):
         ws.column_dimensions[chr(64 + i)].width = width
     
     # Ajuster la hauteur des lignes pour le contenu
-    for row in range(9, 9 + presences.count()):
+    for row in range(9, 9 + len(presences)):
         ws.row_dimensions[row].height = 20
     
     # Ajouter des bordures
@@ -277,12 +333,12 @@ def generate_excel_report(reunion, presences):
         bottom=Side(style='thin')
     )
     
-    for row in range(8, 9 + presences.count()):
+    for row in range(8, 9 + len(presences)):
         for col in range(1, 8):
             ws.cell(row=row, column=col).border = thin_border
     
     # --- ESPACE ENTRE LE TABLEAU ET LE PIED DE PAGE ---
-    space_row = 9 + presences.count() + 2
+    space_row = 9 + len(presences) + 2
     
     # --- PIED DE PAGE ---
     footer_start_row = space_row + 1
@@ -418,7 +474,7 @@ def generate_word_report(reunion, presences):
         ('Date:', reunion.date_debut.strftime('%d/%m/%Y à %H:%M')),
         ('Lieu:', reunion.lieu),
         ('Organisateur:', f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"),
-        ('Nombre de participants:', str(presences.count())),
+        ('Nombre de participants:', str(len(presences))),
     ]
     
     for i, (label, value) in enumerate(info_data):

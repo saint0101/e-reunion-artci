@@ -11,7 +11,7 @@ from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
 from .forms import ReunionForm, PresenceForm, CompteRenduForm, PresenceDirectForm, PresenceForm, PresenceValidationForm, PresenceARTCIFallbackForm
-from .utils import generate_presence_report, send_compte_rendu_email
+from .utils import generate_presence_report, send_compte_rendu_email, sort_presences_by_rank
 import json
 from email.utils import formataddr
 from datetime import timedelta
@@ -51,14 +51,17 @@ def admin_dashboard(request):
         'ongoing': Reunion.objects.filter(status='ongoing').count(),
         'finished': Reunion.objects.filter(status='finished').count(),
     }
-    
+
     recent_reunions = Reunion.objects.order_by('-created_at')[:5]
     users_stats = CustomUser.objects.values('role').annotate(count=Count('id'))
-    
+
     context = {
         'reunions_stats': reunions_stats,
         'recent_reunions': recent_reunions,
         'users_stats': users_stats,
+        'total_users': CustomUser.objects.count(),
+        'total_reunions': reunions_stats['total'],
+        'pending_presences': PresenceRequest.objects.filter(status='pending').count(),
     }
     return render(request, 'reunions/admin_dashboard.html', context)
 
@@ -107,7 +110,8 @@ class ReunionDetailView(LoginRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['presences'] = self.object.presence_requests.filter(status='confirmed')
+        presences_qs = self.object.presence_requests.filter(status='confirmed')
+        context['presences'] = sort_presences_by_rank(list(presences_qs))
         context['comptes_rendus'] = self.object.comptes_rendus.all()
         return context
 
@@ -439,11 +443,9 @@ Ce message est automatique. Merci de ne pas y répondre.
     except Exception as e:
         print(f"❌ Erreur lors de l’envoi de l’email : {e}")
         print(f"   Destinataire : {presence_request.email}")
-        #print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
-        print(f"   Expéditeur : {sender_name}")
-
+        print(f"   Expéditeur : {settings.DEFAULT_FROM_EMAIL}")
         return False
-    
+
 
 def presence_status(request, token):
     """Affiche le statut d'une demande de présence"""
@@ -457,7 +459,7 @@ def presence_status(request, token):
 def compte_rendu_create(request, reunion_id):
     reunion = get_object_or_404(Reunion, pk=reunion_id)
     
-    if request.user.role not in ['secretary', 'admin'] or reunion.secretaire != request.user:
+    if not (request.user.role == 'admin' or reunion.secretaire == request.user):
         messages.error(request, "Vous n'avez pas les permissions nécessaires.")
         return redirect('reunion_detail', pk=reunion_id)
     
@@ -1340,94 +1342,6 @@ def log_cancellation_event(presence_request, notified_email):
         f"Secrétaire notifié: {notified_email} | "
         f"Timestamp: {timezone.now().isoformat()}"
     )
-
-
-def get_display_name(self):
-    """Retourne le nom d'affichage adapté selon le type"""
-    if self.is_artci_email() and not (self.nom or self.prenom):
-        # Pour ARTCI sans nom, extraire depuis l'email
-        email_prefix = self.email.split('@')[0]
-        if '.' in email_prefix:
-            parts = email_prefix.split('.')
-            return f"{parts[0].capitalize()} {parts[1].capitalize() if len(parts) > 1 else ''}"
-        else:
-            return email_prefix.capitalize()
-    elif self.prenom and self.nom:
-        return f"{self.prenom} {self.nom}"
-    elif self.prenom:
-        return self.prenom
-    elif self.nom:
-        return self.nom
-    else:
-        return self.email
-
-
-def debug_secretary_notification(request):
-
-    """Vue de debug pour tester l'envoi au secrétaire"""
-    if not settings.DEBUG:
-        return JsonResponse({'error': 'Debug mode only'})
-    
-    # Test d'envoi rapide
-    test_context = {
-        'participant_name': 'Test User',
-        'participant_email': 'test@example.com',
-        'participant_type': 'ARTCI',
-        'cancellation_reason': 'Test de notification',
-        'secretary_email': getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 'qrmeeting@artci.ci'),
-        'cancelled_at': timezone.now(),
-    }
-    
-    subject = "🧪 Test notification secrétaire"
-    text_content = f"""
-TEST DE NOTIFICATION SECRÉTAIRE
-===============================
-
-Ceci est un test d'envoi de notification au secrétaire.
-
-Configuration actuelle:
-- SECRETARY_NOTIFICATION_EMAIL: {getattr(settings, 'SECRETARY_NOTIFICATION_EMAIL', 'Non défini')}
-- DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}
-- EMAIL_BACKEND: {settings.EMAIL_BACKEND}
-- EMAIL_HOST: {settings.EMAIL_HOST}
-
-Timestamp: {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}
-"""
-    
-    try:
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[test_context['secretary_email']]
-        )
-        
-        result = email.send()
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Test envoyé à {test_context["secretary_email"]}',
-            'result': result,
-            'config': {
-                'secretary_email': test_context['secretary_email'],
-                'from_email': settings.DEFAULT_FROM_EMAIL,
-                'backend': settings.EMAIL_BACKEND,
-                'host': settings.EMAIL_HOST,
-            }
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'error_type': type(e).__name__,
-            'config': {
-                'secretary_email': test_context['secretary_email'],
-                'from_email': settings.DEFAULT_FROM_EMAIL,
-                'backend': settings.EMAIL_BACKEND,
-                'host': settings.EMAIL_HOST,
-            }
-        })
 
 
 def presence_cancel(request, token):

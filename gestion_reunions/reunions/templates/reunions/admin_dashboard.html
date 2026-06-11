@@ -46,24 +46,24 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h3>0</h3>
-                        <p class="mb-0">En attente</p>
+                        <h3>{{ reunions_stats.planned }}</h3>
+                        <p class="mb-0">Planifiées</p>
                     </div>
                     <i class="fas fa-clock fa-2x opacity-75"></i>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3 mb-4">
         <div class="card bg-info text-white">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h3>100%</h3>
-                        <p class="mb-0">Système OK</p>
+                        <h3>{{ reunions_stats.ongoing }}</h3>
+                        <p class="mb-0">En cours</p>
                     </div>
-                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    <i class="fas fa-spinner fa-2x opacity-75"></i>
                 </div>
             </div>
         </div>
