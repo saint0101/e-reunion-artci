@@ -181,3 +181,8 @@ node_modules/
 # Temporary files
 *.tmp
 *.temp
+
+#
+data_ad
+data_ad.txt
+db_backup/
