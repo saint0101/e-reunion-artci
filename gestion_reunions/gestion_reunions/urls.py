@@ -17,9 +17,10 @@ Including another URLconf
 
 # gestion_reunions/urls.py
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 
 # L'URL de l'admin est définie dans settings.ADMIN_URL (variable d'environnement)
 # Par défaut : artci-qrmeeting-admin-2025/
@@ -29,6 +30,11 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
 ]
 
+# Seuls les QR codes sont publics. Les comptes-rendus passent par la vue
+# compte_rendu_download qui contrôle les droits (P7.2 / R1).
+urlpatterns += [
+    re_path(r'^media/(?P<path>qr_codes/.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

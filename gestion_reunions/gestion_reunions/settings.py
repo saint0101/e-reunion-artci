@@ -27,10 +27,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 AUTH_USER_MODEL = 'reunions.CustomUser'
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
+# Pas de valeur par défaut : le démarrage échoue si SECRET_KEY est absente (P7.3 / R2)
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# False par défaut : mettre DEBUG=True uniquement dans le .env local (P7.3 / R2)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 
 # URL secrète de l'interface d'administration Django
@@ -42,7 +44,9 @@ OTP_EXPIRY_SECONDS = 600     # 10 minutes
 OTP_MAX_ATTEMPTS   = 5       # Tentatives avant invalidation
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.16.0.153', '196.216.227.105', "meeting.artci.ci", "www.meeting.artci.ci"]
-
+# Hôtes supplémentaires (ex. tunnel de test en local) : EXTRA_ALLOWED_HOSTS=h1,h2 dans le .env local
+# uniquement, jamais en production (P7.5 / R4)
+ALLOWED_HOSTS += [h.strip() for h in os.environ.get('EXTRA_ALLOWED_HOSTS', '').split(',') if h.strip()]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://meeting.artci.ci",
@@ -86,6 +90,8 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     
+    'axes',
+
     # Local apps
     'reunions',
     'accounts',
@@ -114,7 +120,32 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "accounts.middleware.ForcePasswordChangeMiddleware",
+    # Doit rester en dernier (P7.4 / R3)
+    "axes.middleware.AxesMiddleware",
 ]
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# Verrouillage après échecs de connexion (P7.4 / R3)
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # heure
+AXES_RESET_ON_SUCCESS = True
+# Tant que Nginx ne voit pas les vraies IP clientes (P8.1 / R8), toutes les
+# requêtes arrivent avec la même IP : on verrouille par nom d'utilisateur.
+AXES_LOCKOUT_PARAMETERS = ['username']
+AXES_LOCKOUT_TEMPLATE = 'registration/lockout.html'
+
+# Domaines e-mail acceptés à la création de compte (P7.7). Vide = tous sauf jetables.
+# Ex. ALLOWED_USER_EMAIL_DOMAINS=artci.ci
+ALLOWED_USER_EMAIL_DOMAINS = [
+    d.strip().lower() for d in os.environ.get('ALLOWED_USER_EMAIL_DOMAINS', '').split(',') if d.strip()
+]
+
+# Délai minimal entre deux envois de code OTP (secondes)
+OTP_RESEND_COOLDOWN = 60
 
 ROOT_URLCONF = "gestion_reunions.urls"
 
@@ -142,7 +173,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'gestion_reunions'),
         'USER': os.environ.get('DB_USER', 'e_reunion_artci'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres_ereunion@20.25'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
@@ -179,6 +210,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
 # MEDIA_ROOT = "/app/media"
 
+# Comptes-rendus servis via une vue contrôlant les droits (P7.2 / R1).
+# En production, Django délègue l'envoi du fichier à Nginx (X-Accel-Redirect
+# vers la location interne /protected-media/). En local sans Nginx : False.
+MEDIA_USE_X_ACCEL = config('MEDIA_USE_X_ACCEL', default=not DEBUG, cast=bool)
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -197,7 +233,7 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False  # Important pour Office 365
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'qrmeeting@artci.ci')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'Admin/QR25')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'qrmeeting@artci.ci') 
 """
 
@@ -207,9 +243,11 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False  # TRÈS IMPORTANT : False pour Office 365
 EMAIL_HOST_USER = 'qrmeeting@artci.ci'
-EMAIL_HOST_PASSWORD = 'Admin/QR25'  # Vérifiez que c'est exactement ça
+# Secret fourni uniquement par l'environnement (.env / docker-compose), jamais dans le code (P3.3 / R9)
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 # DEFAULT_FROM_EMAIL = 'qrmeeting@artci.ci'
 DEFAULT_FROM_EMAIL = formataddr(("QR Meeting", "qrmeeting@artci.ci"))
+EMAIL_TIMEOUT = 20  # évite que la page de login reste bloquée si le SMTP ne répond pas
 
 # DEFAULT_FROM_EMAIL = "QR Meeting <qrmeeting@artci.ci>"
 
@@ -425,7 +463,7 @@ SESSION_CACHE_ALIAS = 'default'
 AD_SERVER = os.getenv('AD_SERVER', 'ldap://172.16.0.4')
 AD_PORT = int(os.getenv('AD_PORT', 389))
 AD_BIND_DN = os.getenv('AD_BIND_DN', 'grsa,OU=COMPTE DE SERVICE,OU=DSI,OU=SIEGE,DC=artci,DC=lan')
-AD_BIND_PASSWORD = os.getenv('AD_BIND_PASSWORD', 'P@!xprofond3/20')
+AD_BIND_PASSWORD = os.getenv('AD_BIND_PASSWORD')
 AD_SEARCH_BASE = os.getenv('AD_SEARCH_BASE', 'artci,DC=lan')
 AD_USER_SEARCH_FILTER = os.getenv('AD_USER_SEARCH_FILTER', '(&(objectClass=user)(mail={email}))')
 

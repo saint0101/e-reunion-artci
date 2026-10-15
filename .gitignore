@@ -186,3 +186,4 @@ node_modules/
 data_ad
 data_ad.txt
 db_backup/
+.envlocal

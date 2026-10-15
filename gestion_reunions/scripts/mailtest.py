@@ -1,3 +1,4 @@
+import os
 import smtplib
 import ssl
 
@@ -5,7 +6,7 @@ port = 587  # TLS
 smtp_server = "smtp.office365.com"
 sender_email = "qrmeeting@artci.ci"
 receiver_email = "nguessan.saintfourier@artci.ci"
-password = "Admin/QR25"
+password = os.environ["EMAIL_HOST_PASSWORD"]
 
 message = """\
 Subject: Test SMTP brut

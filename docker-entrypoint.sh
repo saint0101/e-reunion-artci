@@ -59,22 +59,26 @@ apply_migrations() {
     echo "✅ Migrations appliquées"
 }
 
-# Créer le superutilisateur
+# Créer le superutilisateur (uniquement si demandé explicitement, sans mot de passe par défaut)
 create_superuser() {
+    if [ "${CREATE_SUPERUSER:-false}" != "true" ] || [ -z "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
+        echo "ℹ️ Création automatique du superutilisateur désactivée"
+        return 0
+    fi
     echo "👤 Vérification/Création du superutilisateur..."
-    local username="${DJANGO_SUPERUSER_USERNAME:-admin}"
-    local email="${DJANGO_SUPERUSER_EMAIL:-admin@artci.ci}"
-    local password="${DJANGO_SUPERUSER_PASSWORD:-admin123}"
-
-    python manage.py shell <<EOF
+    # Valeurs lues dans l'environnement : jamais interpolées dans le code ni affichées
+    python manage.py shell <<'PYEOF'
+import os
 from django.contrib.auth import get_user_model
 User = get_user_model()
-if not User.objects.filter(username='$username').exists():
-    User.objects.create_superuser('$username', '$email', '$password')
-    print(f"✅ Superutilisateur créé: $username / $password")
+username = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
+if not User.objects.filter(username=username).exists():
+    User.objects.create_superuser(username, os.environ.get('DJANGO_SUPERUSER_EMAIL', ''),
+                                  os.environ['DJANGO_SUPERUSER_PASSWORD'])
+    print(f"✅ Superutilisateur créé: {username}")
 else:
     print("ℹ️ Superutilisateur existe déjà")
-EOF
+PYEOF
 }
 
 # Collecter les fichiers statiques
@@ -114,15 +118,13 @@ main() {
     echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "   📱 URL publique: http://196.216.227.105:80"
     echo "   🏠 URL locale:   http://172.16.0.153:8000"
-    echo "   👤 Admin:        ${DJANGO_SUPERUSER_USERNAME:-admin}"
-    echo "   🔑 Password:     ${DJANGO_SUPERUSER_PASSWORD:-admin123}"
-    echo "   🔧 Admin panel:  http://196.216.227.105:80/admin"
     echo "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
     echo "🚀 Démarrage de Gunicorn sur 0.0.0.0:8000..."
     
     # ✅ CORRECTION FINALE: Gunicorn avec logs vers stdout/stderr
+
     exec gunicorn gestion_reunions.wsgi:application \
         --bind 0.0.0.0:8000 \
         --workers 3 \
@@ -132,10 +134,25 @@ main() {
         --max-requests-jitter 100 \
         --timeout 120 \
         --keep-alive 5 \
+        --worker-tmp-dir /tmp \
         --log-level info \
         --access-logfile=- \
         --error-logfile=- \
         --capture-output
+        
+    #exec gunicorn gestion_reunions.wsgi:application \
+    #    --bind 0.0.0.0:8000 \
+    #    --workers 3 \
+    #    --worker-class gthread \
+    #    --worker-connections 1000 \
+    #   --max-requests 1000 \
+    #    --max-requests-jitter 100 \
+    #    --timeout 120 \
+    #    --keep-alive 5 \
+    #    --log-level info \
+    #    --access-logfile=- \
+    #    --error-logfile=- \
+    #    --capture-output
 }
 
 # Gestion des signaux

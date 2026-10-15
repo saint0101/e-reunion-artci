@@ -1,6 +1,7 @@
 # accounts/views.py
 import hmac
-import random
+import logging
+import secrets
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -13,15 +14,21 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
-from reunions.forms import CustomUserCreationForm
+from django.core.exceptions import ValidationError
+
+from reunions.forms import CustomUserCreationForm, validate_account_email
 from reunions.models import CustomUser
+
+logger = logging.getLogger(__name__)
 
 
 # ── Helpers OTP ───────────────────────────────────────────────────────────────
 
 def _generate_otp():
-    return f"{random.randint(100000, 999999)}"
+    # secrets (CSPRNG) et non random : un OTP ne doit pas être prédictible
+    return f"{secrets.randbelow(900000) + 100000}"
 
 
 def _mask_email(email):
@@ -114,8 +121,9 @@ def login_view(request):
             _send_otp_email(user, otp_code)
             messages.success(request,
                 f"Un code de vérification a été envoyé à {_mask_email(user.email)}.")
-        except Exception as exc:
-            messages.error(request, f"Impossible d'envoyer le code : {exc}")
+        except Exception:
+            logger.exception("Échec d'envoi de l'OTP à l'utilisateur %s", user.pk)
+            messages.error(request, "Impossible d'envoyer le code de vérification. Réessayez plus tard.")
             cache.delete(f'otp_{user.pk}')
             return render(request, 'registration/login.html', {})
 
@@ -163,8 +171,13 @@ def otp_verify_view(request):
                 messages.error(request, "Erreur interne. Veuillez réessayer.")
                 return redirect('login')
 
-            login(request, user)
-            next_url = request.GET.get('next') or 'dashboard'
+            # Plusieurs backends (axes) : préciser celui qui a validé l'identité
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            next_url = request.GET.get('next')
+            if not next_url or not url_has_allowed_host_and_scheme(
+                    next_url, allowed_hosts={request.get_host()},
+                    require_https=request.is_secure()):
+                next_url = 'dashboard'
             return redirect(next_url)
 
         # Code incorrect
@@ -192,6 +205,14 @@ def otp_resend_view(request):
         return redirect('login')
 
     from django.conf import settings
+
+    # Un renvoi par minute au plus (P7.4 / R3) : sinon chaque renvoi remet le
+    # compteur de tentatives à zéro et permet de deviner le code.
+    cooldown_key = f'otp_resend_{user.pk}'
+    if not cache.add(cooldown_key, True, timeout=getattr(settings, 'OTP_RESEND_COOLDOWN', 60)):
+        messages.error(request, "Veuillez patienter une minute avant de demander un nouveau code.")
+        return redirect('otp_verify')
+
     otp_code = _generate_otp()
     cache.set(f'otp_{user.pk}', {'code': otp_code, 'attempts': 0},
               timeout=getattr(settings, 'OTP_EXPIRY_SECONDS', 600))
@@ -199,8 +220,9 @@ def otp_resend_view(request):
     try:
         _send_otp_email(user, otp_code)
         messages.success(request, "Un nouveau code a été envoyé.")
-    except Exception as exc:
-        messages.error(request, f"Erreur lors de l'envoi : {exc}")
+    except Exception:
+        logger.exception("Échec du renvoi de l'OTP à l'utilisateur %s", user.pk)
+        messages.error(request, "Erreur lors de l'envoi du code. Réessayez plus tard.")
 
     return redirect('otp_verify')
 
@@ -241,20 +263,6 @@ def logout_view(request):
     logout(request)
     return render(request, 'registration/logged_out.html')
 
-
-def register(request):
-    """Inscription d'un nouvel utilisateur"""
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, f'Compte créé avec succès! Bienvenue {user.first_name}')
-            return redirect('dashboard')
-    else:
-        form = CustomUserCreationForm()
-    
-    return render(request, 'registration/register.html', {'form': form})
 
 @login_required
 def profile(request):
@@ -375,8 +383,17 @@ def user_update(request, pk):
         user.is_active = request.POST.get('is_active') == 'on'
         
         # Validation
+        email_error = None
+        if user.email:
+            try:
+                validate_account_email(user.email)
+            except ValidationError as exc:
+                email_error = exc.messages[0]
+
         if not user.first_name or not user.last_name or not user.email:
             messages.error(request, 'Les champs nom, prénom et email sont obligatoires.')
+        elif email_error:
+            messages.error(request, email_error)
         else:
             user.save()
             messages.success(request, f'Utilisateur {user.username} mis à jour avec succès!')
@@ -415,119 +432,6 @@ def user_delete(request, pk):
         return redirect('user_list')
     
     return render(request, 'accounts/user_confirm_delete.html', {'form_user': user})
-
-@login_required
-def backup_list_view(request):
-    """Liste des sauvegardes — admin uniquement."""
-    if request.user.role != 'admin':
-        messages.error(request, "Vous n'avez pas les permissions nécessaires.")
-        return redirect('dashboard')
-
-    from pathlib import Path
-    from django.conf import settings
-    import json, tarfile as _tarfile
-
-    backup_root = Path(getattr(settings, 'BACKUP_ROOT', settings.BASE_DIR / 'db_backup'))
-    backup_root.mkdir(parents=True, exist_ok=True)
-
-    backups = []
-    for archive in sorted(backup_root.glob('backup_*.tar.gz'), reverse=True):
-        info = {
-            'name': archive.name,
-            'size_mb': round(archive.stat().st_size / (1024 * 1024), 1),
-            'created_at': None,
-            'includes_media': True,
-        }
-        try:
-            with _tarfile.open(str(archive), 'r:gz') as tar:
-                meta_member = next(
-                    (m for m in tar.getmembers() if m.name.endswith('metadata.json')), None
-                )
-                if meta_member:
-                    meta = json.loads(tar.extractfile(meta_member).read().decode())
-                    raw = meta.get('created_at', '')
-                    if raw:
-                        from datetime import datetime
-                        info['created_at'] = datetime.fromisoformat(raw)
-                    info['includes_media'] = meta.get('includes_media', True)
-        except Exception:
-            pass
-        backups.append(info)
-
-    return render(request, 'accounts/backup_list.html', {
-        'backups': backups,
-        'backup_count': len(backups),
-    })
-
-
-@login_required
-def backup_download(request, filename):
-    """Télécharger une sauvegarde — admin uniquement."""
-    if request.user.role != 'admin':
-        messages.error(request, "Accès refusé.")
-        return redirect('dashboard')
-
-    from pathlib import Path
-    from django.conf import settings
-    from django.http import FileResponse, Http404
-    import os
-
-    backup_root = Path(getattr(settings, 'BACKUP_ROOT', settings.BASE_DIR / 'db_backup'))
-
-    # Sécurité : empêche le path traversal
-    safe_name = Path(filename).name
-    archive = backup_root / safe_name
-    if not archive.exists() or not safe_name.endswith('.tar.gz'):
-        raise Http404("Sauvegarde introuvable.")
-
-    response = FileResponse(open(archive, 'rb'), content_type='application/gzip')
-    response['Content-Disposition'] = f'attachment; filename="{safe_name}"'
-    response['Content-Length'] = archive.stat().st_size
-    return response
-
-
-@login_required
-def backup_delete(request, filename):
-    """Supprimer une sauvegarde — admin uniquement."""
-    if request.user.role != 'admin':
-        messages.error(request, "Accès refusé.")
-        return redirect('dashboard')
-
-    from pathlib import Path
-    from django.conf import settings
-
-    backup_root = Path(getattr(settings, 'BACKUP_ROOT', settings.BASE_DIR / 'db_backup'))
-    safe_name = Path(filename).name
-    archive = backup_root / safe_name
-
-    if request.method == 'POST':
-        if archive.exists() and safe_name.endswith('.tar.gz'):
-            archive.unlink()
-            messages.success(request, f'Sauvegarde {safe_name} supprimée.')
-        else:
-            messages.error(request, 'Fichier introuvable.')
-    return redirect('backup_list')
-
-
-@login_required
-def backup_create_view(request):
-    """Déclenche une sauvegarde manuelle — admin uniquement."""
-    if request.user.role != 'admin':
-        messages.error(request, "Accès refusé.")
-        return redirect('dashboard')
-
-    if request.method == 'POST':
-        try:
-            from django.core.management import call_command
-            from io import StringIO
-            out = StringIO()
-            call_command('backup_create', keep=7, stdout=out)
-            messages.success(request, f'Sauvegarde créée avec succès !')
-        except Exception as exc:
-            messages.error(request, f'Erreur lors de la sauvegarde : {exc}')
-
-    return redirect('backup_list')
-
 
 @login_required
 def user_detail(request, pk):

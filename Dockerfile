@@ -7,6 +7,9 @@ LABEL description="Application de gestion des réunions ARTCI (QR Meeting)"
 LABEL version="1.0"
 
 # Variables d'environnement pour Python
+
+ENV HOME=/home/appuser
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
@@ -27,8 +30,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Créer un utilisateur non-root avec UID/GID spécifiques
-RUN groupadd -r appuser -g 1000 && useradd -u 1000 -r -g appuser appuser
+# RUN groupadd -r appuser -g 1000 && useradd -u 1000 -r -g appuser appuser
 
+RUN groupadd -g 1000 appuser \
+    && useradd -u 1000 -g appuser -m -d /home/appuser -s /bin/sh appuser \
+    && mkdir -p /home/appuser \
+    && chown -R appuser:appuser /home/appuser
+    
 # Définir le répertoire de travail
 WORKDIR /app
 
@@ -45,6 +53,7 @@ COPY . /app/
 RUN mkdir -p /app/staticfiles \
     && mkdir -p /app/media \
     && mkdir -p /app/logs \
+    && mkdir -p /app/db_backup \
     && mkdir -p /app/gestion_reunions/static \
     && chown -R appuser:appuser /app \
     && chmod -R 755 /app
@@ -61,7 +70,7 @@ RUN mkdir -p /app/gestion_reunions/reunions/logs \
 # Passer à l'utilisateur non-root
 USER appuser
 
-# Exposer le port 8080
+# Exposer le port 
 EXPOSE 8000
 
 # Health check

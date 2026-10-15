@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-gestion_reunions}
       POSTGRES_USER: ${DB_USER:-e_reunion_artci}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_ereunion@20.25}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquante dans .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db_backup:/backup
@@ -44,21 +44,22 @@ services:
     container_name: artci_e_reunion
     environment:
       DEBUG: ${DEBUG:-False}
-      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-this}
-      DATABASE_URL: postgresql://${DB_USER:-e_reunion_artci}:${DB_PASSWORD:-postgres_ereunion@20.25}@db:5432/${DB_NAME:-gestion_reunions}
+      # Aucun secret dans ce fichier : tout vient de .env (P3.2 / P3.3 / P7.3)
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY manquante dans .env}
+      DATABASE_URL: postgresql://${DB_USER:-e_reunion_artci}:${DB_PASSWORD}@db:5432/${DB_NAME:-gestion_reunions}
       DB_NAME: ${DB_NAME:-gestion_reunions}
       DB_USER: ${DB_USER:-e_reunion_artci}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_ereunion@20.25}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquante dans .env}
       DB_HOST: db
       DB_PORT: 5432
       REDIS_URL: redis://redis:6379/1
 
       # Email
-      EMAIL_HOST: smtp.gmail.com
+      EMAIL_HOST: smtp.office365.com
       EMAIL_PORT: 587
       EMAIL_USE_TLS: "True"
       EMAIL_HOST_USER: qrmeeting@artci.ci
-      EMAIL_HOST_PASSWORD: "Admin/QR25"
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:?EMAIL_HOST_PASSWORD manquante dans .env}
       DEFAULT_FROM_EMAIL: qrmeeting@artci.ci
 
       # Site configuration pour HTTPS
@@ -81,18 +82,17 @@ services:
       SESSION_COOKIE_SECURE: "True"
       CSRF_COOKIE_SECURE: "True"
       
-      # Variables pour le superutilisateur
-      CREATE_SUPERUSER: "true"
-      DJANGO_SUPERUSER_USERNAME: "admin"
-      DJANGO_SUPERUSER_EMAIL: "admin@artci.ci"
-      DJANGO_SUPERUSER_PASSWORD: "admin123"
+      # Superutilisateur : plus de création automatique avec un mot de passe connu.
+      # Au besoin : docker exec -it artci_e_reunion python /app/gestion_reunions/manage.py createsuperuser
+      CREATE_SUPERUSER: "false"
+      ALLOWED_USER_EMAIL_DOMAINS: ${ALLOWED_USER_EMAIL_DOMAINS:-}
       
     volumes:
       - ./media:/app/media
       - ./static:/app/static
       - ./logs:/app/logs
       - ./db_backup:/app/db_backup
-      - staticfiles_volume:/app/staticfiles
+      - ./staticfiles:/app/gestion_reunions/staticfiles
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -112,8 +112,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      #- ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      #- ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./staticfiles:/staticfiles:ro
       - ./media:/media:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro

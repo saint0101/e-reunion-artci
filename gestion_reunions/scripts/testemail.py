@@ -1,4 +1,5 @@
 # test_email.py
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -10,7 +11,7 @@ def test_smtp_connection():
     smtp_server = "smtp.office365.com"
     port = 587
     sender_email = "qrmeeting@artci.ci"
-    password = "Admin/QR25"
+    password = os.environ["EMAIL_HOST_PASSWORD"]
     
     try:
         # Création de la connexion

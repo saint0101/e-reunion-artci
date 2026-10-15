@@ -9,7 +9,6 @@ urlpatterns = [
     path('otp/verify/', views.otp_verify_view, name='otp_verify'),
     path('otp/resend/', views.otp_resend_view, name='otp_resend'),
     path('logout/', views.logout_view, name='logout'),
-    path('register/', views.register, name='register'),
 
     # Changement de mot de passe obligatoire (1ère connexion)
     path('password-change-required/', views.password_change_required, name='password_change_required'),
@@ -40,11 +39,8 @@ urlpatterns = [
          ),
          name='password_reset_complete'),
 
-    # Sauvegardes (admin)
-    path('backups/', views.backup_list_view, name='backup_list'),
-    path('backups/create/', views.backup_create_view, name='backup_create_view'),
-    path('backups/download/<str:filename>/', views.backup_download, name='backup_download'),
-    path('backups/delete/<str:filename>/', views.backup_delete, name='backup_delete'),
+    # Sauvegardes : retirées de l'interface web (P7.1 / R7). Elles se font
+    # uniquement par cron côté serveur (scripts/backup_cron.sh).
 
     # User Management
     path('profile/', views.profile, name='profile'),
