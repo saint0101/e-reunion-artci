@@ -52,6 +52,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://meeting.artci.ci",
     "https://www.meeting.artci.ci",
 ]
+# Page 403 lisible avec bouton « Réessayer » (le contrôle CSRF reste actif)
+CSRF_FAILURE_VIEW = 'reunions.csrf.csrf_failure'
 
 USE_X_FORWARDED_HOST = True
 

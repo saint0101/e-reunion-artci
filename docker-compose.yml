@@ -67,7 +67,7 @@ services:
       TITLE_PREFIX: "eREUNION"
       SITE_PORT: ""
       SITE_PROTOCOL: "https://"
-      SITE_ADDRESS: "www.meeting.artci.ci"
+      SITE_ADDRESS: "meeting.artci.ci"
       DEFAULT_LIST_SIZE: "10"
       BACKUP_ROOT: /app/db_backup
       ADMIN_URL: ${ADMIN_URL:-artci-qrmeeting-admin-2025/}
