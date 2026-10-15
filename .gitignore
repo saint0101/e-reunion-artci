@@ -187,3 +187,9 @@ data_ad
 data_ad.txt
 db_backup/
 .envlocal
+
+# Nginx / sauvegardes
+nginx/logs/
+nginx/ssl/
+*.bak_*
+* copy.conf
