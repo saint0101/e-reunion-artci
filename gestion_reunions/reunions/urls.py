@@ -27,6 +27,7 @@ urlpatterns = [
     path('reunion/<int:reunion_id>/compte-rendu/create/', views.compte_rendu_create, name='compte_rendu_create'),
     path('compte-rendu/<int:pk>/update/', views.compte_rendu_update, name='compte_rendu_update'),
     path('compte-rendu/<int:pk>/delete/', views.compte_rendu_delete, name='compte_rendu_delete'),
+    path('compte-rendu/<int:pk>/download/', views.compte_rendu_download, name='compte_rendu_download'),
     
     # Export
     path('reunion/<int:reunion_id>/export-presence/', views.export_presence_list, name='export_presence_list'),
@@ -37,13 +38,10 @@ urlpatterns = [
     path('api/send-compte-rendu/<int:pk>/', views.send_compte_rendu, name='send_compte_rendu'),
 
     path('cancel/<str:cancel_token>/', views.presence_cancel_by_token, name='presence_cancel'),
-    path('debug/secretary-notification/', views.debug_secretary_notification, name='debug_secretary_notification'),
 
      # URLs d'annulation
     path('cancel/<str:token>/', views.presence_cancel, name='presence_cancel'),
     
-    # URL de debug (à supprimer en production)
-    path('debug/secretary-notification/', views.debug_secretary_notification, name='debug_secretary_notification'),
 
 
 ]

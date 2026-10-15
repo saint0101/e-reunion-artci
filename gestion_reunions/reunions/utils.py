@@ -17,6 +17,19 @@ from docx.oxml import OxmlElement
 import io
 import unicodedata
 from datetime import datetime
+from xml.sax.saxutils import escape as _rl_escape
+import reportlab.rl_config as _rl_config
+
+# Sécurité : ReportLab interprète le balisage de Paragraph (<img src=...>) et
+# irait chercher des URL http(s) → SSRF. On interdit tout accès réseau.
+_rl_config.trustedSchemes = ['file', 'data']
+
+
+def _xl_safe(cell):
+    """Empêche l'injection de formules Excel (=, +, -, @) depuis des données saisies."""
+    if isinstance(cell.value, str) and cell.value[:1] in ('=', '+', '-', '@'):
+        cell.data_type = 's'
+    return cell
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -115,7 +128,7 @@ def generate_pdf_report(reunion, presences):
     story = []
 
     # --- TITRE ---
-    title = Paragraph(f"Liste de Présence - {reunion.titre}", title_style)
+    title = Paragraph(f"Liste de Présence - {_rl_escape(reunion.titre)}", title_style)
     story.append(title)
     story.append(Spacer(1, 12))
 
@@ -153,12 +166,12 @@ def generate_pdf_report(reunion, presences):
         for i, presence in enumerate(presences, 1):
             data.append([
                 Paragraph(str(i), cell_style),
-                Paragraph(presence.nom or '—', cell_style),
-                Paragraph(presence.prenom or '—', cell_style),
-                Paragraph(presence.organisation or '—', cell_style),
-                Paragraph(presence.fonction or '—', cell_style),
-                Paragraph(presence.contact or '—', cell_style),
-                Paragraph(presence.email or '—', cell_style),
+                Paragraph(_rl_escape(presence.nom or '—'), cell_style),
+                Paragraph(_rl_escape(presence.prenom or '—'), cell_style),
+                Paragraph(_rl_escape(presence.organisation or '—'), cell_style),
+                Paragraph(_rl_escape(presence.fonction or '—'), cell_style),
+                Paragraph(_rl_escape(presence.contact or '—'), cell_style),
+                Paragraph(_rl_escape(presence.email or '—'), cell_style),
             ])
 
         # Largeur totale disponible sur la page (A4 = 8.27 in - marges)
@@ -282,6 +295,7 @@ def generate_excel_report(reunion, presences):
     
     # Titre et informations
     ws['A1'] = f"Liste de Présence - {reunion.titre}"
+    _xl_safe(ws['A1'])
     ws['A1'].font = Font(bold=True, size=16, color="FF6B35")
     ws.merge_cells('A1:G1')
     
@@ -289,6 +303,7 @@ def generate_excel_report(reunion, presences):
     ws['B3'] = reunion.date_debut.strftime('%d/%m/%Y à %H:%M')
     ws['A4'] = "Lieu:"
     ws['B4'] = reunion.lieu
+    _xl_safe(ws['B4'])
     ws['A5'] = "Organisateur:"
     ws['B5'] = f"{reunion.organisateur.first_name} {reunion.organisateur.last_name}"
     ws['A6'] = "Nombre de participants:"
@@ -309,12 +324,12 @@ def generate_excel_report(reunion, presences):
     # Données
     for row, presence in enumerate(presences, 9):
         ws.cell(row=row, column=1, value=row-8).alignment = center_alignment
-        ws.cell(row=row, column=2, value=presence.nom or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=3, value=presence.prenom or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=4, value=presence.organisation or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=5, value=presence.fonction or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=6, value=presence.contact or '—').alignment = wrap_alignment
-        ws.cell(row=row, column=7, value=presence.email).alignment = wrap_alignment
+        _xl_safe(ws.cell(row=row, column=2, value=presence.nom or '—')).alignment = wrap_alignment
+        _xl_safe(ws.cell(row=row, column=3, value=presence.prenom or '—')).alignment = wrap_alignment
+        _xl_safe(ws.cell(row=row, column=4, value=presence.organisation or '—')).alignment = wrap_alignment
+        _xl_safe(ws.cell(row=row, column=5, value=presence.fonction or '—')).alignment = wrap_alignment
+        _xl_safe(ws.cell(row=row, column=6, value=presence.contact or '—')).alignment = wrap_alignment
+        _xl_safe(ws.cell(row=row, column=7, value=presence.email)).alignment = wrap_alignment
     
     # Ajustement automatique des colonnes avec largeurs optimisées
     column_widths = [8, 20, 20, 25, 20, 15, 30]
@@ -438,7 +453,9 @@ def generate_word_report(reunion, presences):
         
         # Table de signature dans le pied de page
         footer.add_paragraph()  # Espace
-        signature_table = footer.add_table(rows=2, cols=2)
+        # Dans un pied de page, python-docx exige la largeur du tableau
+        usable_width = section.page_width - section.left_margin - section.right_margin
+        signature_table = footer.add_table(rows=2, cols=2, width=usable_width)
         
         # Première ligne
         signature_table.cell(0, 0).text = f"Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M')}"

@@ -1,7 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse, Http404
+from django.utils.http import content_disposition_header
+from urllib.parse import quote
+import mimetypes
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -90,6 +93,14 @@ def participant_dashboard(request):
     }
     return render(request, 'reunions/participant_dashboard.html', context)
 
+def _can_view_reunion(user, reunion):
+    """Admin, organisateur, secrétaire ou participant dont la présence est confirmée."""
+    if user.role == 'admin' or user in (reunion.organisateur, reunion.secretaire):
+        return True
+    return bool(user.email) and reunion.presence_requests.filter(
+        email__iexact=user.email, status='confirmed').exists()
+
+
 # Reunion Views
 class ReunionListView(LoginRequiredMixin, ListView):
     model = Reunion
@@ -101,13 +112,25 @@ class ReunionListView(LoginRequiredMixin, ListView):
         queryset = Reunion.objects.all()
         if self.request.user.role == 'secretary':
             queryset = queryset.filter(secretaire=self.request.user)
+        elif self.request.user.role != 'admin':
+            queryset = queryset.filter(
+                presence_requests__email__iexact=self.request.user.email,
+                presence_requests__status='confirmed',
+            ).distinct()
         return queryset
 
 class ReunionDetailView(LoginRequiredMixin, DetailView):
     model = Reunion
     template_name = 'reunions/reunion_detail.html'
     context_object_name = 'reunion'
-    
+
+    def get_object(self, queryset=None):
+        reunion = super().get_object(queryset)
+        # La page expose la liste des participants et les comptes-rendus
+        if not _can_view_reunion(self.request.user, reunion):
+            raise Http404
+        return reunion
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         presences_qs = self.object.presence_requests.filter(status='confirmed')
@@ -528,15 +551,37 @@ def compte_rendu_delete(request, pk):
         'compte_rendu': compte_rendu
     })
 
+@login_required
+def compte_rendu_download(request, pk):
+    """Téléchargement d'un compte-rendu après contrôle des droits (P7.2 / R1)."""
+    compte_rendu = get_object_or_404(CompteRendu.objects.select_related('reunion'), pk=pk)
+    if not compte_rendu.fichier or not _can_view_reunion(request.user, compte_rendu.reunion):
+        raise Http404
+
+    filename = os.path.basename(compte_rendu.fichier.name)
+    if settings.MEDIA_USE_X_ACCEL:
+        # Nginx sert le fichier depuis la location interne /protected-media/
+        response = HttpResponse()
+        response['X-Accel-Redirect'] = '/protected-media/' + quote(compte_rendu.fichier.name)
+        response['Content-Type'] = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        response['Content-Disposition'] = content_disposition_header(True, filename)
+        return response
+
+    try:
+        return FileResponse(compte_rendu.fichier.open('rb'), as_attachment=True, filename=filename)
+    except FileNotFoundError:
+        raise Http404
+
+
 # Export Views
 @login_required
 def export_presence_list(request, reunion_id):
     reunion = get_object_or_404(Reunion, pk=reunion_id)
     
-    if request.user.role not in ['admin', 'secretary']:
+    if not (request.user.role == 'admin' or request.user in (reunion.secretaire, reunion.organisateur)):
         messages.error(request, "Vous n'avez pas les permissions nécessaires.")
         return redirect('reunion_detail', pk=reunion_id)
-    
+
     format_type = request.GET.get('format', 'pdf')
     
     if format_type == 'pdf':
@@ -604,7 +649,10 @@ def send_compte_rendu(request, pk):
     """Envoi AJAX d'un compte-rendu"""
     if request.method == 'POST':
         compte_rendu = get_object_or_404(CompteRendu, pk=pk)
-        
+
+        if not (request.user.role == 'admin' or compte_rendu.reunion.secretaire == request.user):
+            return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+
         if send_compte_rendu_email(compte_rendu):
             compte_rendu.envoye_automatiquement = True
             compte_rendu.save()

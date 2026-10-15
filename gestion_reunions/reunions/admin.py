@@ -136,7 +136,7 @@ class CompteRenduAdmin(ImportExportModelAdmin):
         if obj.fichier:
             return format_html(
                 '<a href="{}" target="_blank">Télécharger</a>',
-                obj.fichier.url
+                reverse('compte_rendu_download', args=[obj.pk])
             )
         return "Pas de fichier"
     download_link.short_description = 'Fichier'

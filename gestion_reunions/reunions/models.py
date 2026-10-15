@@ -60,6 +60,8 @@ class Reunion(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planned')
     qr_code_uuid = models.UUIDField(default=uuid.uuid4, unique=True)
     qr_code_image = models.ImageField(upload_to='qr_codes/', blank=True)
+    rappels_actives = models.BooleanField(default=False)
+    rappel_j1_envoye = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

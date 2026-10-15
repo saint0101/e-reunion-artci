@@ -61,7 +61,7 @@
                         <div class="mt-2">
                             <small class="text-muted">
                                 Fichier actuel : 
-                                <a href="{{ compte_rendu.fichier.url }}" target="_blank">
+                                <a href="{% url 'compte_rendu_download' compte_rendu.pk %}" target="_blank">
                                     {{ compte_rendu.fichier.name|slice:"15:" }}
                                 </a>
                                 ({{ compte_rendu.get_file_size }})

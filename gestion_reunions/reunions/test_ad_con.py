@@ -35,7 +35,7 @@ try:
     print("   ✓ Connexion réussie!\n")
     
     # Test 3: Recherche d'un utilisateur
-    test_email = "dja.rodrigue@artci.ci"
+    test_email = "nguessan.saintfourier@artci.ci"
     print(f"3. Recherche de l'utilisateur: {test_email}")
     
     search_filter = f'(&(objectClass=user)(mail={test_email}))'

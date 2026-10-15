@@ -4,6 +4,27 @@ from .models import Reunion, PresenceRequest, CompteRendu, CustomUser
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.timezone import localtime
+from django.conf import settings
+
+# Domaines réservés ou jetables utilisés lors de l'incident du 14/10/2026 (P7.7)
+BLOCKED_EMAIL_DOMAINS = {
+    'example.com', 'example.org', 'example.net', 'test.com',
+    'mailinator.com', 'yopmail.com', 'yopmail.fr', 'guerrillamail.com',
+    'temp-mail.org', '10minutemail.com', 'trashmail.com', 'sharklasers.com',
+}
+
+
+def validate_account_email(email):
+    """Refuse les domaines jetables ; si ALLOWED_USER_EMAIL_DOMAINS est défini, n'accepte que ceux-là."""
+    domain = email.rsplit('@', 1)[-1].lower()
+    if domain in BLOCKED_EMAIL_DOMAINS:
+        raise ValidationError("Les adresses e-mail jetables ou de test ne sont pas acceptées.")
+    allowed = getattr(settings, 'ALLOWED_USER_EMAIL_DOMAINS', [])
+    if allowed and domain not in allowed:
+        raise ValidationError(
+            "Domaine e-mail non autorisé. Domaines acceptés : %s." % ', '.join(allowed))
+    return email
+
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -24,6 +45,9 @@ class CustomUserCreationForm(UserCreationForm):
                 'class': 'form-control',
                 'placeholder': field.label
             })
+
+    def clean_email(self):
+        return validate_account_email(self.cleaned_data['email'].strip().lower())
 
 class ReunionForm(forms.ModelForm):
     date_debut = forms.DateTimeField(

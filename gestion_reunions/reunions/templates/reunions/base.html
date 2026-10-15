@@ -71,11 +71,6 @@
             
             <div class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
-                    {% if user.role == 'admin' %}
-                    <a class="nav-link" href="{% url 'backup_list' %}" title="Sauvegardes">
-                        <i class="fas fa-database me-1"></i>Sauvegardes
-                    </a>
-                    {% endif %}
                     <span class="navbar-text me-3">
                         Bonjour, {{ user.first_name|default:user.username }}
                     </span>

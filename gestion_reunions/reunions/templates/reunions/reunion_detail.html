@@ -236,7 +236,7 @@
                             {% endif %}
                         </div>
                         <div class="d-flex gap-1">
-                            <a href="{{ cr.fichier.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <a href="{% url 'compte_rendu_download' cr.pk %}" class="btn btn-outline-primary btn-sm" target="_blank">
                                 <i class="fas fa-download me-1"></i>Télécharger
                             </a>
                             {% if user.role == 'secretary' and cr.cree_par == user %}
